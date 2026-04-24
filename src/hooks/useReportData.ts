@@ -71,14 +71,14 @@ export function useReportData(dateFrom: string, dateTo: string) {
           .or('referral_1.neq.null,referral_2.neq.null'),
         buildCount(supabase.from('phsa_clients'))
           .in('testimony_potential', ['Yes', 'Asked', 'Received', 'Provided']),
-        supabase.rpc('get_avg_age'),
-        supabase.rpc('get_reason_counts'),
-        supabase.rpc('get_how_found_counts'),
-        supabase.rpc('get_volunteer_counts'),
-        supabase.rpc('get_province_counts'),
-        supabase.rpc('get_decision_counts'),
-        supabase.rpc('get_conclusion_counts'),
-        supabase.rpc('get_time_band_counts'),
+        supabase.rpc('get_avg_age',           { date_from: dateFrom || null, date_to: dateTo || null }),
+        supabase.rpc('get_reason_counts',     { date_from: dateFrom || null, date_to: dateTo || null }),
+        supabase.rpc('get_how_found_counts',  { date_from: dateFrom || null, date_to: dateTo || null }),
+        supabase.rpc('get_volunteer_counts',  { date_from: dateFrom || null, date_to: dateTo || null }),
+        supabase.rpc('get_province_counts',   { date_from: dateFrom || null, date_to: dateTo || null }),
+        supabase.rpc('get_decision_counts',   { date_from: dateFrom || null, date_to: dateTo || null }),
+        supabase.rpc('get_conclusion_counts', { date_from: dateFrom || null, date_to: dateTo || null }),
+        supabase.rpc('get_time_band_counts',  { date_from: dateFrom || null, date_to: dateTo || null }),
       ]);
 
       setStats({

@@ -37,8 +37,26 @@ export default function ReportsPage(_: Props) {
   const { kpis } = stats;
 
   const avgAgeDisplay = kpis.avg_age !== null ? String(kpis.avg_age) : '—';
-  const dateLabel = dateFrom && dateTo ? `${dateFrom} to ${dateTo}` : dateFrom ? `From ${dateFrom}` : dateTo ? `To ${dateTo}` : 'All time';
-  const fileDate = new Date().toISOString().slice(0, 10);
+
+  const formatDisplayDate = (iso: string) =>
+    new Date(iso + 'T00:00:00').toLocaleDateString('en-ZA', { day: '2-digit', month: 'long', year: 'numeric' });
+
+  const dateLabel =
+    dateFrom && dateTo ? `${formatDisplayDate(dateFrom)} - ${formatDisplayDate(dateTo)}`
+    : dateFrom         ? `From ${formatDisplayDate(dateFrom)}`
+    : dateTo           ? `To ${formatDisplayDate(dateTo)}`
+    : 'All time';
+
+  // Excel filename: "PHSA_Report_March_2026.xlsx" or "PHSA_Report_All_Time.xlsx"
+  const excelFilename = (() => {
+    if (dateFrom || dateTo) {
+      const ref = dateFrom || dateTo;
+      const d = new Date(ref + 'T00:00:00');
+      const month = d.toLocaleString('en-ZA', { month: 'long' });
+      return `PHSA_Report_${month}_${d.getFullYear()}.xlsx`;
+    }
+    return 'PHSA_Report_All_Time.xlsx';
+  })();
 
   const handleExportCsv = async () => {
     setExporting(true);
@@ -57,10 +75,12 @@ export default function ReportsPage(_: Props) {
     const wb = XLSX.utils.book_new();
 
     const summaryRows = [
-      ['Metric', 'Value'],
-      ['Date Range', dateLabel],
-      ['Generated', new Date().toLocaleDateString()],
+      ['Pregnancy Help South Africa — Client Report'],
       [],
+      ['Report Period', dateLabel],
+      ['Generated', new Date().toLocaleDateString('en-ZA', { day: '2-digit', month: 'long', year: 'numeric' })],
+      [],
+      ['Metric', 'Value'],
       ['Total Clients', kpis.total],
       ['Female', kpis.female],
       ['Male', kpis.male],
@@ -80,7 +100,7 @@ export default function ReportsPage(_: Props) {
     XLSX.utils.book_append_sheet(wb, sheetFromChartData(stats.byConclusion, 'Conclusion'), 'Conclusions');
     XLSX.utils.book_append_sheet(wb, sheetFromChartData(stats.byVolunteer, 'Volunteer'), 'Cases per Volunteer');
 
-    XLSX.writeFile(wb, `PHSA_Report_${fileDate}.xlsx`);
+    XLSX.writeFile(wb, excelFilename);
   };
 
   const handlePrint = () => {

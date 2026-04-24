@@ -45,7 +45,7 @@ export default function DashboardPage(_: Props) {
         .or('referral_1.neq.null,referral_2.neq.null'),
       supabase.from('phsa_clients').select('*', { count: 'exact', head: true })
         .in('testimony_potential', ['Yes', 'Asked', 'Received', 'Provided']),
-      supabase.rpc('get_avg_age'),
+      supabase.rpc('get_avg_age', { date_from: null, date_to: null }),
     ]).then(([total, female, male, referrals, testimony, avgAge]) => {
       setKpis({
         total:              total.count     ?? null,

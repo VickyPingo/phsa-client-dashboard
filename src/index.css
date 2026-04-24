@@ -23,6 +23,50 @@
   }
 }
 
+@media print {
+  @page {
+    margin: 1.5cm;
+    size: A4 portrait;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 11pt;
+  }
+
+  /* Hide chrome */
+  nav, aside, header,
+  [data-sidebar],
+  .print\:hidden { display: none !important; }
+
+  /* Full width content */
+  .lg\:ml-56 { margin-left: 0 !important; }
+
+  main { padding: 0 !important; }
+
+  /* Cards flush on print */
+  .card {
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+    margin-bottom: 1.5rem;
+  }
+
+  /* Keep each chart section together */
+  .card { page-break-inside: avoid; }
+
+  /* Tables look clean */
+  table { width: 100%; border-collapse: collapse; font-size: 9pt; }
+  th, td { border: 1px solid #cbd5e1; padding: 4px 8px; }
+  thead tr { background: #f1f5f9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  tfoot tr { background: #f1f5f9 !important; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  tr:nth-child(even) td { background: #f8fafc !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  /* Recharts SVG must render */
+  svg { overflow: visible; }
+}
+
 @layer components {
   .btn-primary {
     @apply inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg font-medium text-sm

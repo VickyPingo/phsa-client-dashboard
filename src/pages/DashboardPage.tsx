@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Client } from '../lib/types';
 import { supabase } from '../lib/supabase';
 import { newClientsPerMonth } from '../lib/utils';
+import { Client } from '../lib/types';
+import { useDashboardCharts } from '../hooks/useDashboardCharts';
 import KPICards from '../components/Dashboard/KPICards';
 import {
   NewClientsChart, ReasonChart, HowFoundChart,
@@ -13,7 +14,7 @@ interface Props {
   clients: Client[];
 }
 
-export default function DashboardPage({ clients }: Props) {
+export default function DashboardPage(_: Props) {
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear);
   const [totalCount, setTotalCount] = useState<number | null>(null);
@@ -21,7 +22,9 @@ export default function DashboardPage({ clients }: Props) {
   const [monthlyData, setMonthlyData] = useState<{ month: string; count: number }[]>([]);
   const [monthlyLoading, setMonthlyLoading] = useState(true);
 
-  // Fetch total count and gender counts from DB (not from the capped clients prop)
+  const { charts, loading: chartsLoading } = useDashboardCharts();
+
+  // Fetch total count and gender counts from DB
   useEffect(() => {
     Promise.all([
       supabase.from('phsa_clients').select('*', { count: 'exact', head: true }),
@@ -50,7 +53,7 @@ export default function DashboardPage({ clients }: Props) {
 
   return (
     <div className="space-y-6">
-      <KPICards clients={clients} totalCount={totalCount} genderCounts={genderCounts} />
+      <KPICards totalCount={totalCount} genderCounts={genderCounts} />
 
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Analytics</h2>
@@ -74,12 +77,20 @@ export default function DashboardPage({ clients }: Props) {
 
       <div className="flex flex-col gap-4">
         <NewClientsChart data={monthlyData} year={year} loading={monthlyLoading} />
-        <ReasonChart clients={clients} />
-        <HowFoundChart clients={clients} />
-        <ProvinceChart clients={clients} />
-        <ConclusionChart clients={clients} />
-        <DecisionChart clients={clients} />
-        <VolunteerChart clients={clients} />
+        {chartsLoading ? (
+          <div className="flex items-center justify-center py-16">
+            <div className="w-6 h-6 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : (
+          <>
+            <ReasonChart    data={charts.byReason} />
+            <HowFoundChart  data={charts.byHowFound} />
+            <ProvinceChart  data={charts.byProvince} />
+            <ConclusionChart data={charts.byConclusion} />
+            <DecisionChart  data={charts.byDecision} />
+            <VolunteerChart data={charts.byVolunteer} />
+          </>
+        )}
       </div>
     </div>
   );

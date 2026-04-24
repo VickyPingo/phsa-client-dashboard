@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Client } from '../lib/types';
 import { csvExport, downloadCsv, decisionLabel } from '../lib/utils';
+import { ChartRow } from '../hooks/useReportData';
 import { Download, Printer, BarChart3, Users, MapPin, Heart, Loader2 } from 'lucide-react';
 import { ContactTimeChart, ReportBarChart, ReportProvinceChart } from '../components/Dashboard/Charts';
 import { useReportData } from '../hooks/useReportData';
@@ -87,37 +88,35 @@ export default function ReportsPage(_: Props) {
         </div>
       ) : (
         <div className="flex flex-col gap-5">
-          <ContactTimeChart bands={stats.timeBands} />
-          <ReportProvinceChart
-            data={Object.entries(stats.byProvince).sort((a, b) => b[1] - a[1]).map(([name, value]) => ({ name, value }))}
-          />
+          <ContactTimeChart data={stats.timeBands} />
+          <ReportProvinceChart data={stats.byProvince} />
           <ReportBarChart
             title="Reason for Contact"
-            data={Object.entries(stats.byReason).sort((a, b) => b[1] - a[1]).map(([name, value]) => ({ name, value }))}
+            data={stats.byReason}
             color="#0d9488"
             leftMargin={160}
           />
           <ReportBarChart
             title="How Clients Found PHSA"
-            data={Object.entries(stats.byHowFound).sort((a, b) => b[1] - a[1]).map(([name, value]) => ({ name, value }))}
+            data={stats.byHowFound}
             color="#22d3ee"
             leftMargin={160}
           />
           <ReportBarChart
             title="Decisions"
-            data={Object.entries(stats.byDecision).sort((a, b) => b[1] - a[1]).map(([k, value]) => ({ name: decisionLabel(k), value }))}
+            data={stats.byDecision.map((r: ChartRow) => ({ name: decisionLabel(r.name), value: r.value }))}
             color="#fb7185"
             leftMargin={120}
           />
           <ReportBarChart
             title="Conclusions"
-            data={Object.entries(stats.byConclusion).sort((a, b) => b[1] - a[1]).map(([name, value]) => ({ name, value }))}
+            data={stats.byConclusion}
             color="#34d399"
             leftMargin={120}
           />
           <ReportBarChart
             title="Cases per Volunteer"
-            data={Object.entries(stats.byVolunteer).sort((a, b) => b[1] - a[1]).map(([name, value]) => ({ name, value }))}
+            data={stats.byVolunteer}
             color="#f59e0b"
             leftMargin={100}
           />

@@ -1,9 +1,9 @@
 import {
-  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
+  BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
-import { Client } from '../../lib/types';
-import { countByKey, topN, decisionLabel } from '../../lib/utils';
+import { decisionLabel } from '../../lib/utils';
+import { ChartRow } from '../../hooks/useReportData';
 
 const PALETTE = [
   '#0d9488', '#fb923c', '#fb7185', '#22d3ee',
@@ -61,23 +61,22 @@ export function NewClientsChart({
   );
 }
 
-export function ReasonChart({ clients }: { clients: Client[] }) {
-  const counts = countByKey(clients, 'reason_for_contact');
-  const data = topN(counts, 8);
+export function ReasonChart({ data }: { data: ChartRow[] }) {
+  const top = data.slice(0, 8);
   return (
     <ChartCard title="Reason for Contact">
       <ResponsiveContainer width="100%" height={400}>
         <PieChart>
           <Pie
-            data={data}
+            data={top}
+            dataKey="value"
             cx="50%"
             cy="45%"
             innerRadius={80}
             outerRadius={140}
             paddingAngle={3}
-            dataKey="value"
           >
-            {data.map((_, i) => (
+            {top.map((_, i) => (
               <Cell key={i} fill={PALETTE[i % PALETTE.length]} />
             ))}
           </Pie>
@@ -93,11 +92,7 @@ export function ReasonChart({ clients }: { clients: Client[] }) {
   );
 }
 
-export function HowFoundChart({ clients }: { clients: Client[] }) {
-  const counts = countByKey(clients, 'how_found_us');
-  const data = Object.entries(counts)
-    .sort((a, b) => b[1] - a[1])
-    .map(([name, value]) => ({ name, value }));
+export function HowFoundChart({ data }: { data: ChartRow[] }) {
   const barHeight = Math.max(400, data.length * 36);
   return (
     <ChartCard title="How Clients Found PHSA">
@@ -105,12 +100,7 @@ export function HowFoundChart({ clients }: { clients: Client[] }) {
         <BarChart data={data} layout="vertical" margin={{ top: 4, right: 24, left: 150, bottom: 4 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
           <XAxis type="number" tick={{ fontSize: 11, fill: '#94a3b8' }} allowDecimals={false} />
-          <YAxis
-            type="category"
-            dataKey="name"
-            tick={{ fontSize: 11, fill: '#64748b' }}
-            width={148}
-          />
+          <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: '#64748b' }} width={148} />
           <Tooltip content={<CustomTooltip />} />
           <Bar dataKey="value" name="Clients" fill="#0d9488" radius={[0, 4, 4, 0]} />
         </BarChart>
@@ -119,11 +109,7 @@ export function HowFoundChart({ clients }: { clients: Client[] }) {
   );
 }
 
-export function ProvinceChart({ clients }: { clients: Client[] }) {
-  const counts = countByKey(clients, 'province');
-  const data = Object.entries(counts)
-    .sort((a, b) => b[1] - a[1])
-    .map(([name, value]) => ({ name, value }));
+export function ProvinceChart({ data }: { data: ChartRow[] }) {
   return (
     <ChartCard title="Clients by Province">
       <ResponsiveContainer width="100%" height={400}>
@@ -145,21 +131,19 @@ export function ProvinceChart({ clients }: { clients: Client[] }) {
   );
 }
 
-export function ConclusionChart({ clients }: { clients: Client[] }) {
-  const counts = countByKey(clients.filter(c => c.conclusion), 'conclusion');
-  const data = Object.entries(counts).map(([name, value]) => ({ name, value }));
+export function ConclusionChart({ data }: { data: ChartRow[] }) {
   return (
     <ChartCard title="Conclusion Outcomes">
       <ResponsiveContainer width="100%" height={400}>
         <PieChart>
           <Pie
             data={data}
+            dataKey="value"
             cx="50%"
             cy="45%"
             innerRadius={80}
             outerRadius={140}
             paddingAngle={3}
-            dataKey="value"
           >
             {data.map((_, i) => (
               <Cell key={i} fill={PALETTE[i % PALETTE.length]} />
@@ -177,15 +161,12 @@ export function ConclusionChart({ clients }: { clients: Client[] }) {
   );
 }
 
-export function DecisionChart({ clients }: { clients: Client[] }) {
-  const counts = countByKey(clients.filter(c => c.decision), 'decision');
-  const data = Object.entries(counts)
-    .sort((a, b) => b[1] - a[1])
-    .map(([name, value]) => ({ name: decisionLabel(name), code: name, value }));
+export function DecisionChart({ data }: { data: ChartRow[] }) {
+  const mapped = data.map(r => ({ ...r, name: decisionLabel(r.name) }));
   return (
     <ChartCard title="Decisions">
       <ResponsiveContainer width="100%" height={400}>
-        <BarChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+        <BarChart data={mapped} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
           <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#94a3b8' }} />
           <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} allowDecimals={false} />
@@ -199,19 +180,22 @@ export function DecisionChart({ clients }: { clients: Client[] }) {
 
 const TIME_BAND_ORDER = ['Morning', 'Lunch', 'Afternoon', 'Evening', 'Night', 'Early Hours'];
 
-export function ContactTimeChart({ bands }: { bands: Record<string, number> }) {
-  const data = TIME_BAND_ORDER.map(name => ({ name, count: bands[name] ?? 0 }));
-  const total = data.reduce((s, d) => s + d.count, 0);
+export function ContactTimeChart({ data }: { data: ChartRow[] }) {
+  const ordered = TIME_BAND_ORDER.map(name => ({
+    name,
+    value: data.find(r => r.name === name)?.value ?? 0,
+  }));
+  const total = ordered.reduce((s, d) => s + d.value, 0);
 
   return (
     <ChartCard title="Time of First Contact">
       <ResponsiveContainer width="100%" height={400}>
-        <BarChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+        <BarChart data={ordered} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
           <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#94a3b8' }} />
           <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} allowDecimals={false} />
           <Tooltip content={<CustomTooltip />} />
-          <Bar dataKey="count" name="Clients" fill="#22d3ee" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="value" name="Clients" fill="#22d3ee" radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
       {total === 0 && (
@@ -222,11 +206,7 @@ export function ContactTimeChart({ bands }: { bands: Record<string, number> }) {
   );
 }
 
-export function VolunteerChart({ clients }: { clients: Client[] }) {
-  const counts = countByKey(clients.filter(c => c.volunteer), 'volunteer');
-  const data = Object.entries(counts)
-    .sort((a, b) => b[1] - a[1])
-    .map(([name, value]) => ({ name, value }));
+export function VolunteerChart({ data }: { data: ChartRow[] }) {
   const barHeight = Math.max(400, data.length * 36);
   return (
     <ChartCard title="Cases per Volunteer">
@@ -243,7 +223,7 @@ export function VolunteerChart({ clients }: { clients: Client[] }) {
   );
 }
 
-// Reports-page bar chart variant accepting pre-aggregated data
+// Generic horizontal bar chart for Reports page
 export function ReportBarChart({
   title,
   data,
@@ -251,7 +231,7 @@ export function ReportBarChart({
   leftMargin = 120,
 }: {
   title: string;
-  data: { name: string; value: number }[];
+  data: ChartRow[];
   color?: string;
   leftMargin?: number;
 }) {
@@ -271,7 +251,7 @@ export function ReportBarChart({
   );
 }
 
-export function ReportProvinceChart({ data }: { data: { name: string; value: number }[] }) {
+export function ReportProvinceChart({ data }: { data: ChartRow[] }) {
   return (
     <ChartCard title="Clients by Province">
       <ResponsiveContainer width="100%" height={450}>

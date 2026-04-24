@@ -6,7 +6,7 @@ export interface Client {
   age: string | null;
   sex: string | null;
   reason_for_contact: string | null;
-  how_found_phsa: string | null;
+  how_found_us: string | null;
   phone_number: string | null;
   province: string | null;
   referral_1: string | null;

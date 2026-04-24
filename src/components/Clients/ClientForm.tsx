@@ -15,7 +15,7 @@ const empty: ClientInsert = {
   age: null,
   sex: null,
   reason_for_contact: null,
-  how_found_phsa: null,
+  how_found_us: null,
   phone_number: null,
   province: null,
   referral_1: null,
@@ -96,7 +96,7 @@ export default function ClientForm({ initial, onSubmit, onCancel, submitLabel = 
           </select>
         </Field>
         <Field label="How Found PHSA">
-          <select className="select" value={form.how_found_phsa ?? ''} onChange={e => set('how_found_phsa', e.target.value)}>
+          <select className="select" value={form.how_found_us ?? ''} onChange={e => set('how_found_us', e.target.value)}>
             <option value="">Select source</option>
             {HOW_FOUND_OPTIONS.map(h => <option key={h} value={h}>{h}</option>)}
           </select>

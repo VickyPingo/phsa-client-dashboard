@@ -31,7 +31,7 @@ export default function ReportsPage({ clients }: Props) {
     byVolunteer: countByKey(filtered, 'volunteer'),
     byDecision: countByKey(filtered.filter(c => c.decision), 'decision'),
     byConclusion: countByKey(filtered.filter(c => c.conclusion), 'conclusion'),
-    byHowFound: countByKey(filtered, 'how_found_phsa'),
+    byHowFound: countByKey(filtered, 'how_found_us'),
   }), [filtered]);
 
   const handleExportCsv = () => {

@@ -94,7 +94,7 @@ export function ReasonChart({ clients }: { clients: Client[] }) {
 }
 
 export function HowFoundChart({ clients }: { clients: Client[] }) {
-  const counts = countByKey(clients, 'how_found_phsa');
+  const counts = countByKey(clients, 'how_found_us');
   const data = Object.entries(counts)
     .sort((a, b) => b[1] - a[1])
     .map(([name, value]) => ({ name, value }));

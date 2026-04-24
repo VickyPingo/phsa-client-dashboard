@@ -62,7 +62,7 @@ export function csvExport(clients: Client[]): string {
   ];
   const rows = clients.map(c => [
     c.id, c.first_contact_date ?? '', c.client_name, c.volunteer ?? '',
-    c.age ?? '', c.sex ?? '', c.reason_for_contact ?? '', c.how_found_phsa ?? '',
+    c.age ?? '', c.sex ?? '', c.reason_for_contact ?? '', c.how_found_us ?? '',
     c.phone_number ?? '', c.province ?? '', c.referral_1 ?? '', c.referral_2 ?? '',
     c.follow_up_date ?? '', c.made_contact_with_pc ?? '', c.decision ?? '',
     c.closed_date ?? '', c.conclusion ?? '', c.testimony_potential ?? '',

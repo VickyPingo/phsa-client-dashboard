@@ -77,7 +77,7 @@ export default function ClientDetailModal({ client, onClose, onUpdate, onDelete 
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Detail label="Reason for Contact" value={client.reason_for_contact} />
-          <Detail label="How Found PHSA" value={client.how_found_phsa} />
+          <Detail label="How Found PHSA" value={client.how_found_us} />
           <Detail label="Referral 1" value={client.referral_1} />
           <Detail label="Referral 2" value={client.referral_2} />
           <Detail label="Conclusion" value={client.conclusion} />

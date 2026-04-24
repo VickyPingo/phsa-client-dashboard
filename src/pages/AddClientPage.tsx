@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { ClientInsert, VOLUNTEERS } from '../lib/types';
+import { ClientInsert } from '../lib/types';
 import ClientForm from '../components/Clients/ClientForm';
 import Spinner from '../components/ui/Spinner';
 import Modal from '../components/ui/Modal';
@@ -19,43 +19,53 @@ interface DuplicateWarning {
   pendingData: ClientInsert;
 }
 
+type Mode = 'facebook' | 'whatsapp' | 'manual';
+
+function mapExtracted(data: Record<string, any>, defaultHowFoundUs?: string): Partial<ClientInsert> {
+  const today = new Date().toISOString().split('T')[0];
+  return {
+    client_name:        data.clientName        || '',
+    first_contact_date: data.firstContactDate  || today,
+    first_contact_time: data.firstContactTime  || null,
+    volunteer:          data.volunteer         || null,
+    age:                data.age ? String(data.age) : null,
+    sex:                data.sex               || null,
+    reason_for_contact: data.reasonForContact  || null,
+    how_found_us:       data.howFoundUs        || defaultHowFoundUs || null,
+    phone_number:       data.phoneNumber       || null,
+    province:           data.province          || null,
+    notes:              data.notes             || null,
+  };
+}
 
 export default function AddClientPage({ onSuccess, onViewClient }: Props) {
-  const [mode, setMode] = useState<'chat' | 'manual'>('chat');
-  const [chatText, setChatText] = useState('');
+  const [mode, setMode] = useState<Mode>('facebook');
+  const [fbChat, setFbChat] = useState('');
+  const [waChat, setWaChat] = useState('');
   const [extracting, setExtracting] = useState(false);
   const [extractError, setExtractError] = useState<string | null>(null);
   const [extracted, setExtracted] = useState<Partial<ClientInsert> | null>(null);
   const [saved, setSaved] = useState(false);
   const [duplicate, setDuplicate] = useState<DuplicateWarning | null>(null);
 
-  const handleExtract = async () => {
-    if (!chatText.trim()) return;
+  const chatText = mode === 'facebook' ? fbChat : waChat;
+  const setChatText = mode === 'facebook' ? setFbChat : setWaChat;
+
+  const handleExtract = async (source: 'facebook' | 'whatsapp') => {
+    const text = source === 'facebook' ? fbChat : waChat;
+    if (!text.trim()) return;
     setExtracting(true);
     setExtractError(null);
     setExtracted(null);
     try {
       const { data, error } = await supabase.functions.invoke('extract-client', {
-        body: { chat: chatText },
+        body: { chat: text, source },
       });
       console.log('Extracted data:', data);
       if (error) throw new Error(error.message || 'Extraction failed. Please try again.');
       if (data?.error) throw new Error(data.error);
-      const today = new Date().toISOString().split('T')[0];
-      const mapped: Partial<ClientInsert> = {
-        client_name:        data.clientName        || '',
-        first_contact_date: data.firstContactDate  || today,
-        first_contact_time: data.firstContactTime  || null,
-        volunteer:          data.volunteer         || null,
-        age:                data.age ? String(data.age) : null,
-        sex:                data.sex               || null,
-        reason_for_contact: data.reasonForContact  || null,
-        how_found_us:       data.howFoundUs        || null,
-        phone_number:       data.phoneNumber       || null,
-        province:           data.province          || null,
-        notes:              data.notes             || null,
-      };
-      setExtracted(mapped);
+      const defaultHowFoundUs = source === 'whatsapp' ? 'WhatsApp' : undefined;
+      setExtracted(mapExtracted(data, defaultHowFoundUs));
     } catch (err: any) {
       setExtractError(err.message || 'Something went wrong.');
     } finally {
@@ -70,7 +80,8 @@ export default function AddClientPage({ onSuccess, onViewClient }: Props) {
     setTimeout(() => {
       setSaved(false);
       setExtracted(null);
-      setChatText('');
+      setFbChat('');
+      setWaChat('');
       onSuccess();
     }, 1500);
   };
@@ -103,106 +114,118 @@ export default function AddClientPage({ onSuccess, onViewClient }: Props) {
     );
   }
 
-  return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 shadow-sm w-fit">
-        <button
-          onClick={() => setMode('chat')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-            mode === 'chat'
-              ? 'bg-gradient-to-r from-primary-600 to-accent-600 text-white shadow-sm'
-              : 'text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          <MessageSquare className="w-4 h-4" />
-          Paste Chat
-        </button>
-        <button
-          onClick={() => setMode('manual')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-            mode === 'manual'
-              ? 'bg-gradient-to-r from-primary-600 to-accent-600 text-white shadow-sm'
-              : 'text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          <FormInput className="w-4 h-4" />
-          Manual Entry
-        </button>
-      </div>
+  const tabs: { id: Mode; icon: React.ReactNode; label: string }[] = [
+    { id: 'facebook', icon: <MessageSquare className="w-4 h-4" />, label: 'Facebook Messenger' },
+    { id: 'whatsapp', icon: <span className="text-sm leading-none">💬</span>, label: 'WhatsApp' },
+    { id: 'manual',   icon: <FormInput className="w-4 h-4" />,    label: 'Manual Entry' },
+  ];
 
-      {mode === 'chat' && (
-        <div className="space-y-5">
-          <div className="card p-5">
-            <div className="flex items-start gap-3 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center flex-shrink-0">
-                <Sparkles className="w-4 h-4 text-white" />
-              </div>
-              <div>
-                <p className="font-semibold text-slate-700 text-sm">AI Chat Extraction</p>
-                <p className="text-slate-400 text-xs mt-0.5">
-                  Paste a Facebook Messenger conversation and Claude will extract client details automatically.
-                </p>
-              </div>
+  const activeClass = 'bg-gradient-to-r from-primary-600 to-accent-600 text-white shadow-sm';
+  const inactiveClass = 'text-slate-500 hover:text-slate-700';
+
+  const ChatExtractPanel = ({ source }: { source: 'facebook' | 'whatsapp' }) => {
+    const text    = source === 'facebook' ? fbChat : waChat;
+    const setText = source === 'facebook' ? setFbChat : setWaChat;
+    const label   = source === 'facebook' ? 'Paste Facebook Messenger Chat' : 'Paste WhatsApp chat export here';
+    const desc    = source === 'facebook'
+      ? 'Paste a Facebook Messenger conversation and Claude will extract client details automatically.'
+      : 'Paste a WhatsApp chat export and Claude will extract client details automatically.';
+    const placeholder = source === 'facebook'
+      ? '[Volunteer]: Hi, thank you for reaching out to PHSA. How can we help you today?\n[Client]: I found out I\'m pregnant and I\'m really scared...\n[Volunteer]: I\'m so sorry to hear that. Can you tell me a bit more?\n...'
+      : '7 Apr 2026, 19:17 - Khanya Cekiso: Hi I need help\n7 Apr 2026, 19:18 - Vicky: Hello Khanya...';
+
+    return (
+      <div className="space-y-5">
+        <div className="card p-5">
+          <div className="flex items-start gap-3 mb-4">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center flex-shrink-0">
+              <Sparkles className="w-4 h-4 text-white" />
             </div>
-
             <div>
-              <label className="label">Paste Facebook Messenger Chat</label>
-              <textarea
-                className="input font-mono text-xs"
-                rows={10}
-                value={chatText}
-                onChange={e => setChatText(e.target.value)}
-                placeholder="[Volunteer]: Hi, thank you for reaching out to PHSA. How can we help you today?&#10;[Client]: I found out I'm pregnant and I'm really scared...&#10;[Volunteer]: I'm so sorry to hear that. Can you tell me a bit more?&#10;..."
-              />
-            </div>
-
-            {extractError && (
-              <div className="mt-3 flex items-center gap-2 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 text-sm text-rose-700">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                {extractError}
-              </div>
-            )}
-
-            <div className="mt-4">
-              <button
-                onClick={handleExtract}
-                disabled={!chatText.trim() || extracting}
-                className="btn-primary"
-              >
-                {extracting ? (
-                  <>
-                    <Spinner size="sm" />
-                    Extracting with Claude...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4" />
-                    Extract Client Info
-                  </>
-                )}
-              </button>
+              <p className="font-semibold text-slate-700 text-sm">AI Chat Extraction</p>
+              <p className="text-slate-400 text-xs mt-0.5">{desc}</p>
             </div>
           </div>
 
-          {extracted && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5 text-sm">
-                <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-                <span>Client information extracted! Review and complete the form below, then save.</span>
-              </div>
-              <div className="card p-5">
-                <h3 className="font-semibold text-slate-700 text-sm mb-4">Review & Complete</h3>
-                <ClientForm
-                  initial={extracted}
-                  onSubmit={handleSave}
-                  onCancel={() => { setExtracted(null); setChatText(''); }}
-                  submitLabel="Save Client"
-                />
-              </div>
+          <div>
+            <label className="label">{label}</label>
+            <textarea
+              className="input font-mono text-xs"
+              rows={10}
+              value={text}
+              onChange={e => setText(e.target.value)}
+              placeholder={placeholder}
+            />
+          </div>
+
+          {extractError && (
+            <div className="mt-3 flex items-center gap-2 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 text-sm text-rose-700">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              {extractError}
             </div>
           )}
+
+          <div className="mt-4">
+            <button
+              onClick={() => handleExtract(source)}
+              disabled={!text.trim() || extracting}
+              className="btn-primary"
+            >
+              {extracting ? (
+                <>
+                  <Spinner size="sm" />
+                  Extracting with Claude...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  Extract Client Info
+                </>
+              )}
+            </button>
+          </div>
         </div>
-      )}
+
+        {extracted && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5 text-sm">
+              <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+              <span>Client information extracted! Review and complete the form below, then save.</span>
+            </div>
+            <div className="card p-5">
+              <h3 className="font-semibold text-slate-700 text-sm mb-4">Review & Complete</h3>
+              <ClientForm
+                initial={extracted}
+                onSubmit={handleSave}
+                onCancel={() => { setExtracted(null); setText(''); }}
+                submitLabel="Save Client"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="max-w-3xl mx-auto space-y-6">
+      <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 shadow-sm w-fit">
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => { setMode(tab.id); setExtracted(null); setExtractError(null); }}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              mode === tab.id ? activeClass : inactiveClass
+            }`}
+          >
+            {tab.icon}
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {mode === 'facebook' && <ChatExtractPanel source="facebook" />}
+      {mode === 'whatsapp' && <ChatExtractPanel source="whatsapp" />}
 
       {mode === 'manual' && (
         <div className="card p-5">

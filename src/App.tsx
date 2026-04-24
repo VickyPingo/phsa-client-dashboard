@@ -83,7 +83,7 @@ export default function App() {
           {page === 'add-client' && (
             <AddClientPage onSuccess={handleAddSuccess} />
           )}
-          {page === 'testimonies' && <TestimoniesPage clients={clients} />}
+          {page === 'testimonies' && <TestimoniesPage />}
           {page === 'reports' && <ReportsPage clients={clients} />}
         </>
       )}

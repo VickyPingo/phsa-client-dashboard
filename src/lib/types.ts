@@ -73,4 +73,16 @@ export const MADE_CONTACT_OPTIONS = [
   'Yes', 'No', 'Partially', 'Planning to', 'Not sure',
 ];
 
+export interface Testimony {
+  id: string;
+  client_name: string;
+  first_contact_date: string | null;
+  testimony_text: string | null;
+  testimony_edited: string | null;
+  province: string | null;
+  reason_for_contact: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export type Page = 'dashboard' | 'clients' | 'add-client' | 'testimonies' | 'reports';

@@ -88,7 +88,6 @@ export default function ReportsPage(_: Props) {
         </div>
       ) : (
         <div className="flex flex-col gap-5">
-          <ContactTimeChart data={stats.timeBands} />
           <ReportProvinceChart data={stats.byProvince} showTable />
           <ReportBarChart
             title="Reason for Contact"
@@ -130,6 +129,7 @@ export default function ReportsPage(_: Props) {
             showTable
             tableLabel="Volunteer"
           />
+          <ContactTimeChart data={stats.timeBands} />
         </div>
       )}
     </div>

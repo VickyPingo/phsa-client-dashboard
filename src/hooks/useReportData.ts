@@ -95,9 +95,30 @@ export function useReportData(dateFrom: string, dateTo: string) {
       if (dateFrom) totalQuery = totalQuery.gte('first_contact_date', dateFrom);
       if (dateTo)   totalQuery = totalQuery.lte('first_contact_date', dateTo);
 
-      const [rows, { count: totalCount }, { count: testimonyCount }] = await Promise.all([
+      const buildCountQuery = (base: ReturnType<typeof supabase.from>) => {
+        let q = base.select('*', { count: 'exact', head: true });
+        if (dateFrom) q = q.gte('first_contact_date', dateFrom);
+        if (dateTo)   q = q.lte('first_contact_date', dateTo);
+        return q;
+      };
+
+      const femaleQuery   = buildCountQuery(supabase.from('phsa_clients')).eq('sex', 'F');
+      const maleQuery     = buildCountQuery(supabase.from('phsa_clients')).eq('sex', 'M');
+      const referralQuery = buildCountQuery(supabase.from('phsa_clients')).not('referral_1', 'is', null);
+
+      const [
+        rows,
+        { count: totalCount },
+        { count: femaleCount },
+        { count: maleCount },
+        { count: referralCount },
+        { count: testimonyCount },
+      ] = await Promise.all([
         fetchAllRows(dateFrom, dateTo),
         totalQuery,
+        femaleQuery,
+        maleQuery,
+        referralQuery,
         supabase.from('phsa_testimonies').select('*', { count: 'exact', head: true }),
       ]);
 
@@ -108,9 +129,9 @@ export function useReportData(dateFrom: string, dateTo: string) {
       setStats({
         kpis: {
           total,
-          female:    rows.filter(r => r.sex === 'F').length,
-          male:      rows.filter(r => r.sex === 'M').length,
-          referrals: rows.filter(r => r.referral_1 || r.referral_2).length,
+          female:    femaleCount   ?? 0,
+          male:      maleCount     ?? 0,
+          referrals: referralCount ?? 0,
           testimony: testimonyCount ?? 0,
           avg_age,
         },

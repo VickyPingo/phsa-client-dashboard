@@ -14,29 +14,76 @@ interface Props {
   clients: Client[];
 }
 
+export interface DashboardKPIs {
+  total: number | null;
+  women: number | null;
+  men: number | null;
+  avgAge: number | null;
+  referrals: number | null;
+  testimonyPotential: number | null;
+}
+
 export default function DashboardPage(_: Props) {
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear);
-  const [totalCount, setTotalCount] = useState<number | null>(null);
-  const [genderCounts, setGenderCounts] = useState<{ women: number; men: number } | null>(null);
+  const [kpis, setKpis] = useState<DashboardKPIs>({
+    total: null, women: null, men: null,
+    avgAge: null, referrals: null, testimonyPotential: null,
+  });
   const [monthlyData, setMonthlyData] = useState<{ month: string; count: number }[]>([]);
   const [monthlyLoading, setMonthlyLoading] = useState(true);
 
   const { charts, loading: chartsLoading } = useDashboardCharts();
 
-  // Fetch total count and gender counts from DB
   useEffect(() => {
-    Promise.all([
-      supabase.from('phsa_clients').select('*', { count: 'exact', head: true }),
-      supabase.from('phsa_clients').select('*', { count: 'exact', head: true }).eq('sex', 'F'),
-      supabase.from('phsa_clients').select('*', { count: 'exact', head: true }).eq('sex', 'M'),
-    ]).then(([total, female, male]) => {
-      if (total.count !== null) setTotalCount(total.count);
-      setGenderCounts({ women: female.count ?? 0, men: male.count ?? 0 });
-    });
+    async function loadKPIs() {
+      const [
+        totalRes,
+        femaleRes,
+        maleRes,
+        testimonyRes,
+        agesRes,
+      ] = await Promise.all([
+        supabase.from('phsa_clients').select('*', { count: 'exact', head: true }),
+        supabase.from('phsa_clients').select('*', { count: 'exact', head: true }).eq('sex', 'F'),
+        supabase.from('phsa_clients').select('*', { count: 'exact', head: true }).eq('sex', 'M'),
+        supabase.from('phsa_clients').select('*', { count: 'exact', head: true })
+          .in('testimony_potential', ['Yes', 'Asked', 'Received', 'Provided']),
+        supabase.from('phsa_clients').select('age').range(0, 9999),
+      ]);
+
+      // Average age: filter to pure numeric strings client-side
+      const ages = ((agesRes.data ?? []) as { age: string | null }[])
+        .filter(r => r.age && /^\d+$/.test(r.age))
+        .map(r => parseInt(r.age!));
+      const avgAge = ages.length > 0
+        ? Math.round((ages.reduce((a, b) => a + b, 0) / ages.length) * 10) / 10
+        : null;
+
+      // Referrals: fetch referral_1 and referral_2, count rows where either is non-empty
+      const { data: refData } = await supabase
+        .from('phsa_clients')
+        .select('referral_1,referral_2')
+        .range(0, 9999);
+      const referrals = (refData ?? []).filter(
+        (r: { referral_1: string | null; referral_2: string | null }) =>
+          (r.referral_1 && r.referral_1.trim() !== '') ||
+          (r.referral_2 && r.referral_2.trim() !== '')
+      ).length;
+
+      setKpis({
+        total:              totalRes.count    ?? null,
+        women:              femaleRes.count   ?? null,
+        men:                maleRes.count     ?? null,
+        avgAge,
+        referrals,
+        testimonyPotential: testimonyRes.count ?? null,
+      });
+    }
+
+    loadKPIs();
   }, []);
 
-  // Fetch first_contact_date for the selected year to build the monthly chart
   useEffect(() => {
     setMonthlyLoading(true);
     supabase
@@ -53,7 +100,7 @@ export default function DashboardPage(_: Props) {
 
   return (
     <div className="space-y-6">
-      <KPICards totalCount={totalCount} genderCounts={genderCounts} />
+      <KPICards kpis={kpis} />
 
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Analytics</h2>
@@ -83,12 +130,12 @@ export default function DashboardPage(_: Props) {
           </div>
         ) : (
           <>
-            <ReasonChart    data={charts.byReason} />
-            <HowFoundChart  data={charts.byHowFound} />
-            <ProvinceChart  data={charts.byProvince} />
+            <ReasonChart     data={charts.byReason} />
+            <HowFoundChart   data={charts.byHowFound} />
+            <ProvinceChart   data={charts.byProvince} />
             <ConclusionChart data={charts.byConclusion} />
-            <DecisionChart  data={charts.byDecision} />
-            <VolunteerChart data={charts.byVolunteer} />
+            <DecisionChart   data={charts.byDecision} />
+            <VolunteerChart  data={charts.byVolunteer} />
           </>
         )}
       </div>

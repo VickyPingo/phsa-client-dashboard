@@ -1,51 +1,53 @@
 import { Users, TrendingUp, Heart, MapPin, UserCheck } from 'lucide-react';
+import { DashboardKPIs } from '../../pages/DashboardPage';
 
 interface Props {
-  totalCount?: number | null;
-  genderCounts?: { women: number; men: number } | null;
+  kpis: DashboardKPIs;
 }
 
-export default function KPICards({ totalCount, genderCounts }: Props) {
-  const total   = totalCount ?? 0;
-  const women   = genderCounts?.women ?? 0;
-  const men     = genderCounts?.men   ?? 0;
-  // Percentages include Unknown in denominator
-  const womenPct = total > 0 ? Math.round((women / total) * 100) : 0;
-  const menPct   = total > 0 ? Math.round((men   / total) * 100) : 0;
+export default function KPICards({ kpis }: Props) {
+  const { total, women, men, avgAge, referrals, testimonyPotential } = kpis;
+
+  const fmt = (n: number | null) => n === null ? '…' : n.toLocaleString();
+  const totalN = total ?? 0;
+  const womenPct = totalN > 0 && women !== null ? Math.round((women / totalN) * 100) : null;
+  const menPct   = totalN > 0 && men   !== null ? Math.round((men   / totalN) * 100) : null;
 
   const cards = [
     {
       label: 'Total Clients',
-      value: total > 0 ? total.toLocaleString() : '…',
+      value: fmt(total),
       sub: 'All time',
       icon: Users,
       gradient: 'from-primary-500 to-primary-600',
     },
     {
       label: 'Gender Split',
-      value: total > 0 ? `${womenPct}% / ${menPct}%` : '…',
-      sub: total > 0 ? `${women.toLocaleString()} women · ${men.toLocaleString()} men · incl. unknown` : '',
+      value: womenPct !== null && menPct !== null ? `${womenPct}% / ${menPct}%` : '…',
+      sub: women !== null && men !== null
+        ? `${women.toLocaleString()} women · ${men.toLocaleString()} men`
+        : '',
       icon: UserCheck,
       gradient: 'from-accent-500 to-accent-600',
     },
     {
       label: 'Average Age',
-      value: '—',
+      value: avgAge !== null ? String(avgAge) : '…',
       sub: 'years old',
       icon: TrendingUp,
       gradient: 'from-rose-400 to-rose-500',
     },
     {
       label: 'Total Referrals',
-      value: '—',
-      sub: 'Clients referred',
+      value: fmt(referrals),
+      sub: 'referral_1 or referral_2 filled',
       icon: MapPin,
-      gradient: 'from-amber-400 to-warm-500',
+      gradient: 'from-amber-400 to-amber-500',
     },
     {
       label: 'Testimony Potential',
-      value: '—',
-      sub: 'Clients flagged',
+      value: fmt(testimonyPotential),
+      sub: 'Yes · Asked · Received · Provided',
       icon: Heart,
       gradient: 'from-emerald-500 to-teal-600',
     },

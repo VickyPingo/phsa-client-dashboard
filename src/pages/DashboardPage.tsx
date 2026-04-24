@@ -7,6 +7,7 @@ import KPICards from '../components/Dashboard/KPICards';
 import {
   NewClientsChart, ReasonChart, HowFoundChart,
   ProvinceChart, ConclusionChart, DecisionChart, VolunteerChart,
+  ContactTimeChart,
 } from '../components/Dashboard/Charts';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
@@ -37,45 +38,32 @@ export default function DashboardPage(_: Props) {
 
   useEffect(() => {
     async function loadKPIs() {
-      const [
-        totalRes,
-        femaleRes,
-        maleRes,
-        testimonyRes,
-        agesRes,
-      ] = await Promise.all([
-        supabase.from('phsa_clients').select('*', { count: 'exact', head: true }),
-        supabase.from('phsa_clients').select('*', { count: 'exact', head: true }).eq('sex', 'F'),
-        supabase.from('phsa_clients').select('*', { count: 'exact', head: true }).eq('sex', 'M'),
+      const [kpisRes, testimonyRes, refData] = await Promise.all([
+        // report_kpis already has total, female, male, avg_age
+        supabase.rpc('report_kpis', { date_from: null, date_to: null }),
+        // testimony_potential: count rows matching any of these values
         supabase.from('phsa_clients').select('*', { count: 'exact', head: true })
           .in('testimony_potential', ['Yes', 'Asked', 'Received', 'Provided']),
-        supabase.from('phsa_clients').select('age').range(0, 9999),
+        // referrals: need referral_1 + referral_2, fetch both columns for all rows
+        supabase.from('phsa_clients').select('referral_1,referral_2').range(0, 9999),
       ]);
 
-      // Average age: filter to pure numeric strings client-side
-      const ages = ((agesRes.data ?? []) as { age: string | null }[])
-        .filter(r => r.age && /^\d+$/.test(r.age))
-        .map(r => parseInt(r.age!));
-      const avgAge = ages.length > 0
-        ? Math.round((ages.reduce((a, b) => a + b, 0) / ages.length) * 10) / 10
-        : null;
+      const kpisData = kpisRes.data as {
+        total: number; female: number; male: number; avg_age: number | null;
+      } | null;
 
-      // Referrals: fetch referral_1 and referral_2, count rows where either is non-empty
-      const { data: refData } = await supabase
-        .from('phsa_clients')
-        .select('referral_1,referral_2')
-        .range(0, 9999);
-      const referrals = (refData ?? []).filter(
-        (r: { referral_1: string | null; referral_2: string | null }) =>
+      // Count rows where either referral field is non-empty
+      const referrals = ((refData.data ?? []) as { referral_1: string | null; referral_2: string | null }[])
+        .filter(r =>
           (r.referral_1 && r.referral_1.trim() !== '') ||
           (r.referral_2 && r.referral_2.trim() !== '')
-      ).length;
+        ).length;
 
       setKpis({
-        total:              totalRes.count    ?? null,
-        women:              femaleRes.count   ?? null,
-        men:                maleRes.count     ?? null,
-        avgAge,
+        total:              kpisData?.total    ?? null,
+        women:              kpisData?.female   ?? null,
+        men:                kpisData?.male     ?? null,
+        avgAge:             kpisData?.avg_age  ?? null,
         referrals,
         testimonyPotential: testimonyRes.count ?? null,
       });
@@ -136,6 +124,7 @@ export default function DashboardPage(_: Props) {
             <ConclusionChart data={charts.byConclusion} />
             <DecisionChart   data={charts.byDecision} />
             <VolunteerChart  data={charts.byVolunteer} />
+            <ContactTimeChart data={charts.timeBands} />
           </>
         )}
       </div>

@@ -18,7 +18,8 @@ export default function TestimoniesPage() {
       const { data, error } = await supabase
         .from('phsa_testimonies')
         .select('*')
-        .order('first_contact_date', { ascending: false });
+        .order('client_name', { ascending: true, nullsFirst: false })
+        .order('first_contact_date', { ascending: false, nullsFirst: false });
       if (error) setError(error.message);
       else setTestimonies((data ?? []) as Testimony[]);
       setLoading(false);

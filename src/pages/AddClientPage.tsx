@@ -29,7 +29,20 @@ export default function AddClientPage({ onSuccess }: Props) {
       });
       if (error) throw new Error(error.message || 'Extraction failed. Please try again.');
       if (data?.error) throw new Error(data.error);
-      setExtracted(data);
+      const today = new Date().toISOString().split('T')[0];
+      const mapped: Partial<ClientInsert> = {
+        client_name:        data.clientName        || '',
+        first_contact_date: data.firstContactDate  || today,
+        volunteer:          data.volunteer         || null,
+        age:                data.age ? String(data.age) : null,
+        sex:                data.sex               || null,
+        reason_for_contact: data.reasonForContact  || null,
+        how_found_us:       data.howFoundUs        || null,
+        phone_number:       data.phoneNumber       || null,
+        province:           data.province          || null,
+        notes:              data.notes             || null,
+      };
+      setExtracted(mapped);
     } catch (err: any) {
       setExtractError(err.message || 'Something went wrong.');
     } finally {

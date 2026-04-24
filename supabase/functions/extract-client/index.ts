@@ -114,18 +114,18 @@ ${chat}`;
       if (match) parsed = JSON.parse(match[0]);
     }
 
-    // Map camelCase keys → snake_case ClientInsert keys and apply defaults
+    // Return camelCase keys; the frontend maps these to ClientInsert fields
     const result = {
-      client_name:        (parsed.clientName as string | null) ?? null,
-      first_contact_date: (parsed.firstContactDate as string | null) ?? today,
-      volunteer:          (parsed.volunteer as string | null) ?? null,
-      age:                (parsed.age as string | null) ?? null,
-      sex:                (parsed.sex as string | null) ?? null,
-      reason_for_contact: (parsed.reasonForContact as string | null) ?? null,
-      how_found_us:       (parsed.howFoundUs as string | null) ?? null,
-      phone_number:       (parsed.phoneNumber as string | null) ?? null,
-      province:           (parsed.province as string | null) ?? null,
-      notes:              (parsed.notes as string | null) ?? null,
+      clientName:        (parsed.clientName as string | null) ?? null,
+      firstContactDate:  (parsed.firstContactDate as string | null) ?? today,
+      volunteer:         (parsed.volunteer as string | null) ?? null,
+      age:               (parsed.age != null ? String(parsed.age) : null),
+      sex:               (parsed.sex as string | null) ?? null,
+      reasonForContact:  (parsed.reasonForContact as string | null) ?? null,
+      howFoundUs:        (parsed.howFoundUs as string | null) ?? null,
+      phoneNumber:       (parsed.phoneNumber as string | null) ?? null,
+      province:          (parsed.province as string | null) ?? null,
+      notes:             (parsed.notes as string | null) ?? null,
     };
 
     return new Response(

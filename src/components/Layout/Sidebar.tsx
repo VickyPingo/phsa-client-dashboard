@@ -12,7 +12,7 @@ interface SidebarProps {
 const navItems: { page: Page; label: string; icon: React.ElementType }[] = [
   { page: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { page: 'clients', label: 'Clients', icon: Users },
-  { page: 'add-client', label: 'Add Client', icon: UserPlus },
+  { page: 'add-client', label: 'Import Client', icon: UserPlus },
   { page: 'testimonies', label: 'Testimonies', icon: Heart },
   { page: 'reports', label: 'Reports', icon: FileText },
   { page: 'settings', label: 'Settings', icon: Settings },

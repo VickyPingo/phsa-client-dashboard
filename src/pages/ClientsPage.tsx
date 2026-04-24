@@ -145,7 +145,7 @@ export default function ClientsPage({ onRefresh, onAddNew, initialClientId, onIn
           </button>
         </div>
         <button onClick={onAddNew} className="btn-primary">
-          <UserPlus className="w-4 h-4" /> Add Client
+          <UserPlus className="w-4 h-4" /> Import Client
         </button>
       </div>
 

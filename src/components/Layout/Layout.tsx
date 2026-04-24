@@ -12,7 +12,7 @@ interface LayoutProps {
 const pageTitles: Record<Page, string> = {
   dashboard: 'Dashboard',
   clients: 'Clients',
-  'add-client': 'Add Client',
+  'add-client': 'Import Client',
   testimonies: 'Testimonies',
   reports: 'Reports',
 };

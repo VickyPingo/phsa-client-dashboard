@@ -35,7 +35,7 @@ export default function ReportsPage(_: Props) {
   };
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6">
       <div className="card p-5">
         <h3 className="font-semibold text-slate-700 text-sm mb-4">Date Range Filter</h3>
         <div className="flex flex-wrap gap-4 items-end">
@@ -64,7 +64,7 @@ export default function ReportsPage(_: Props) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 print:grid-cols-3">
+      <div className="grid grid-cols-3 md:grid-cols-6 gap-4 print:grid-cols-3">
         {[
           { label: 'Total Clients', value: loading ? '…' : kpis.total, icon: Users, color: 'text-primary-600' },
           { label: 'Female', value: loading ? '…' : kpis.female, icon: Users, color: 'text-rose-500' },
@@ -86,7 +86,7 @@ export default function ReportsPage(_: Props) {
           <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 [&>*]:min-w-0">
           <ContactTimeChart bands={stats.timeBands} />
           <StatTable title="By Province" data={stats.byProvince} total={kpis.total} />
           <StatTable title="Reason for Contact" data={stats.byReason} total={kpis.total} />

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Client, ClientInsert, PROVINCES, REASONS_FOR_CONTACT, HOW_FOUND_OPTIONS, CONCLUSIONS, DECISIONS, MADE_CONTACT_OPTIONS } from '../../lib/types';
+import { Client, ClientInsert, PROVINCES, REASONS_FOR_CONTACT, CONCLUSIONS, DECISIONS, MADE_CONTACT_OPTIONS } from '../../lib/types';
 import { useVolunteers } from '../../hooks/useVolunteers';
 
 interface Props {
@@ -102,10 +102,7 @@ export default function ClientForm({ initial, onSubmit, onCancel, submitLabel = 
           </select>
         </Field>
         <Field label="How Found PHSA">
-          <select className="select" value={form.how_found_us ?? ''} onChange={e => set('how_found_us', e.target.value)}>
-            <option value="">Select source</option>
-            {HOW_FOUND_OPTIONS.map(h => <option key={h} value={h}>{h}</option>)}
-          </select>
+          <input className="input" value={form.how_found_us ?? ''} onChange={e => set('how_found_us', e.target.value)} placeholder="e.g. Facebook, Google, Friend..." />
         </Field>
       </div>
 

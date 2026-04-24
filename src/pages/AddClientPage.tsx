@@ -27,6 +27,7 @@ export default function AddClientPage({ onSuccess }: Props) {
       const { data, error } = await supabase.functions.invoke('extract-client', {
         body: { chat: chatText },
       });
+      console.log('Extracted data:', data);
       if (error) throw new Error(error.message || 'Extraction failed. Please try again.');
       if (data?.error) throw new Error(data.error);
       const today = new Date().toISOString().split('T')[0];

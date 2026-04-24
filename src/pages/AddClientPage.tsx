@@ -9,8 +9,6 @@ interface Props {
   onSuccess: () => void;
 }
 
-const SUPABASE_URL = 'https://magmhrdbwpcfkibudtqj.supabase.co';
-const ANON_KEY     = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1hZ21ocmRid3BjZmtpYnVkdHFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NTI1NjAsImV4cCI6MjA4NzQyODU2MH0.ksv-5y1AErj7SJja0v2BkspOajqOk0MqWRNUIDRBA5w';
 
 export default function AddClientPage({ onSuccess }: Props) {
   const [mode, setMode] = useState<'chat' | 'manual'>('chat');
@@ -26,17 +24,11 @@ export default function AddClientPage({ onSuccess }: Props) {
     setExtractError(null);
     setExtracted(null);
     try {
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/extract-client`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${ANON_KEY}`,
-        },
-        body: JSON.stringify({ chat: chatText }),
+      const { data, error } = await supabase.functions.invoke('extract-client', {
+        body: { chat: chatText },
       });
-      if (!res.ok) throw new Error('Extraction failed. Please try again.');
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
+      if (error) throw new Error(error.message || 'Extraction failed. Please try again.');
+      if (data?.error) throw new Error(data.error);
       setExtracted(data);
     } catch (err: any) {
       setExtractError(err.message || 'Something went wrong.');

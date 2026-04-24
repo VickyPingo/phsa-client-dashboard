@@ -72,10 +72,8 @@ export default function DashboardPage({ clients }: Props) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="lg:col-span-2">
-          <NewClientsChart data={monthlyData} year={year} loading={monthlyLoading} />
-        </div>
+      <div className="flex flex-col gap-4">
+        <NewClientsChart data={monthlyData} year={year} loading={monthlyLoading} />
         <ReasonChart clients={clients} />
         <HowFoundChart clients={clients} />
         <ProvinceChart clients={clients} />

@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { Client } from '../lib/types';
 import { csvExport, downloadCsv, decisionLabel } from '../lib/utils';
 import { Download, Printer, BarChart3, Users, MapPin, Heart, Loader2 } from 'lucide-react';
-import { ContactTimeChart } from '../components/Dashboard/Charts';
+import { ContactTimeChart, ReportBarChart, ReportProvinceChart } from '../components/Dashboard/Charts';
 import { useReportData } from '../hooks/useReportData';
 
 // clients prop is kept for backwards compat but no longer used for stats
@@ -86,54 +86,41 @@ export default function ReportsPage(_: Props) {
           <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 [&>*]:min-w-0">
+        <div className="flex flex-col gap-5">
           <ContactTimeChart bands={stats.timeBands} />
-          <StatTable title="By Province" data={stats.byProvince} total={kpis.total} />
-          <StatTable title="Reason for Contact" data={stats.byReason} total={kpis.total} />
-          <StatTable title="How Clients Found PHSA" data={stats.byHowFound} total={kpis.total} />
-          <StatTable
-            title="Decisions"
-            data={Object.fromEntries(Object.entries(stats.byDecision).map(([k, v]) => [decisionLabel(k), v]))}
-            total={kpis.total}
+          <ReportProvinceChart
+            data={Object.entries(stats.byProvince).sort((a, b) => b[1] - a[1]).map(([name, value]) => ({ name, value }))}
           />
-          <StatTable title="Conclusions" data={stats.byConclusion} total={kpis.total} />
-          <StatTable title="Cases per Volunteer" data={stats.byVolunteer} total={kpis.total} />
-        </div>
-      )}
-    </div>
-  );
-}
-
-function StatTable({ title, data, total }: { title: string; data: Record<string, number>; total: number }) {
-  const sorted = Object.entries(data).sort((a, b) => b[1] - a[1]);
-  return (
-    <div className="card overflow-hidden">
-      <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
-        <p className="font-semibold text-sm text-slate-700">{title}</p>
-      </div>
-      {sorted.length === 0 ? (
-        <p className="px-4 py-3 text-xs text-slate-400">No data</p>
-      ) : (
-        <div className="divide-y divide-slate-50">
-          {sorted.map(([label, count]) => (
-            <div key={label} className="px-4 py-2.5 flex items-center justify-between gap-2">
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-slate-700 truncate">{label || 'Unknown'}</p>
-              </div>
-              <div className="flex items-center gap-3 flex-shrink-0">
-                <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-primary-500 rounded-full"
-                    style={{ width: `${total > 0 ? (count / total) * 100 : 0}%` }}
-                  />
-                </div>
-                <span className="text-xs font-semibold text-slate-600 w-6 text-right">{count}</span>
-                <span className="text-xs text-slate-400 w-8 text-right">
-                  {total > 0 ? Math.round((count / total) * 100) : 0}%
-                </span>
-              </div>
-            </div>
-          ))}
+          <ReportBarChart
+            title="Reason for Contact"
+            data={Object.entries(stats.byReason).sort((a, b) => b[1] - a[1]).map(([name, value]) => ({ name, value }))}
+            color="#0d9488"
+            leftMargin={160}
+          />
+          <ReportBarChart
+            title="How Clients Found PHSA"
+            data={Object.entries(stats.byHowFound).sort((a, b) => b[1] - a[1]).map(([name, value]) => ({ name, value }))}
+            color="#22d3ee"
+            leftMargin={160}
+          />
+          <ReportBarChart
+            title="Decisions"
+            data={Object.entries(stats.byDecision).sort((a, b) => b[1] - a[1]).map(([k, value]) => ({ name: decisionLabel(k), value }))}
+            color="#fb7185"
+            leftMargin={120}
+          />
+          <ReportBarChart
+            title="Conclusions"
+            data={Object.entries(stats.byConclusion).sort((a, b) => b[1] - a[1]).map(([name, value]) => ({ name, value }))}
+            color="#34d399"
+            leftMargin={120}
+          />
+          <ReportBarChart
+            title="Cases per Volunteer"
+            data={Object.entries(stats.byVolunteer).sort((a, b) => b[1] - a[1]).map(([name, value]) => ({ name, value }))}
+            color="#f59e0b"
+            leftMargin={100}
+          />
         </div>
       )}
     </div>

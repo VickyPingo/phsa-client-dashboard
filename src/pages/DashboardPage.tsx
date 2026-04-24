@@ -17,15 +17,20 @@ export default function DashboardPage({ clients }: Props) {
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear);
   const [totalCount, setTotalCount] = useState<number | null>(null);
+  const [genderCounts, setGenderCounts] = useState<{ women: number; men: number } | null>(null);
   const [monthlyData, setMonthlyData] = useState<{ month: string; count: number }[]>([]);
   const [monthlyLoading, setMonthlyLoading] = useState(true);
 
-  // Fetch total client count once
+  // Fetch total count and gender counts from DB (not from the capped clients prop)
   useEffect(() => {
-    supabase
-      .from('phsa_clients')
-      .select('*', { count: 'exact', head: true })
-      .then(({ count }) => { if (count !== null) setTotalCount(count); });
+    Promise.all([
+      supabase.from('phsa_clients').select('*', { count: 'exact', head: true }),
+      supabase.from('phsa_clients').select('*', { count: 'exact', head: true }).eq('sex', 'F'),
+      supabase.from('phsa_clients').select('*', { count: 'exact', head: true }).eq('sex', 'M'),
+    ]).then(([total, female, male]) => {
+      if (total.count !== null) setTotalCount(total.count);
+      setGenderCounts({ women: female.count ?? 0, men: male.count ?? 0 });
+    });
   }, []);
 
   // Fetch first_contact_date for the selected year to build the monthly chart
@@ -45,7 +50,7 @@ export default function DashboardPage({ clients }: Props) {
 
   return (
     <div className="space-y-6">
-      <KPICards clients={clients} totalCount={totalCount} />
+      <KPICards clients={clients} totalCount={totalCount} genderCounts={genderCounts} />
 
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Analytics</h2>

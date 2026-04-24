@@ -5,14 +5,16 @@ import { calcAverageAge } from '../../lib/utils';
 interface Props {
   clients: Client[];
   totalCount?: number | null;
+  genderCounts?: { women: number; men: number } | null;
 }
 
-export default function KPICards({ clients, totalCount }: Props) {
+export default function KPICards({ clients, totalCount, genderCounts }: Props) {
   const total = totalCount ?? clients.length;
-  const women = clients.filter(c => c.sex === 'F').length;
-  const men = clients.filter(c => c.sex === 'M').length;
+  const women = genderCounts?.women ?? clients.filter(c => c.sex === 'F').length;
+  const men   = genderCounts?.men   ?? clients.filter(c => c.sex === 'M').length;
+  // Percentages are of total (including Unknown), matching the DB breakdown
   const womenPct = total > 0 ? Math.round((women / total) * 100) : 0;
-  const menPct = total > 0 ? Math.round((men / total) * 100) : 0;
+  const menPct   = total > 0 ? Math.round((men   / total) * 100) : 0;
   const avgAge = calcAverageAge(clients);
   const referrals = clients.filter(c => c.referral_1 || c.referral_2).length;
   const testimonies = clients.filter(c => c.testimony_potential === 'Yes').length;
@@ -29,7 +31,7 @@ export default function KPICards({ clients, totalCount }: Props) {
     {
       label: 'Gender Split',
       value: `${womenPct}% / ${menPct}%`,
-      sub: `${women} women · ${men} men`,
+      sub: `${women} women · ${men} men · incl. unknown`,
       icon: UserCheck,
       gradient: 'from-accent-500 to-accent-600',
       iconBg: 'bg-white/20',

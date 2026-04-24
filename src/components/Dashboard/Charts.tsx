@@ -5,6 +5,47 @@ import {
 import { decisionLabel } from '../../lib/utils';
 import { ChartRow } from '../../hooks/useReportData';
 
+function DataTable({ data, categoryLabel }: { data: ChartRow[]; categoryLabel: string }) {
+  const sorted = [...data].sort((a, b) => b.value - a.value);
+  const total = sorted.reduce((s, r) => s + r.value, 0);
+  if (!sorted.length) return null;
+  return (
+    <div className="mt-4 overflow-x-auto">
+      <table className="w-full text-xs border-collapse">
+        <thead>
+          <tr className="bg-slate-100">
+            <th className="text-left px-3 py-2 font-semibold text-slate-600 border border-slate-200">{categoryLabel}</th>
+            <th className="text-right px-3 py-2 font-semibold text-slate-600 border border-slate-200 w-24">Count</th>
+            <th className="text-right px-3 py-2 font-semibold text-slate-600 border border-slate-200 w-16">%</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map((row, i) => (
+            <tr key={row.name} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
+              <td className="px-3 py-1.5 text-slate-700 border border-slate-200">{row.name}</td>
+              <td className="px-3 py-1.5 text-right text-slate-700 border border-slate-200 tabular-nums">
+                {row.value.toLocaleString()}
+              </td>
+              <td className="px-3 py-1.5 text-right text-slate-500 border border-slate-200 tabular-nums">
+                {total > 0 ? ((row.value / total) * 100).toFixed(1) + '%' : '—'}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr className="bg-slate-100 font-bold">
+            <td className="px-3 py-2 text-slate-700 border border-slate-200">TOTAL</td>
+            <td className="px-3 py-2 text-right text-slate-700 border border-slate-200 tabular-nums">
+              {total.toLocaleString()}
+            </td>
+            <td className="px-3 py-2 text-right text-slate-700 border border-slate-200">100%</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  );
+}
+
 const PALETTE = [
   '#0d9488', '#fb923c', '#fb7185', '#22d3ee',
   '#f59e0b', '#34d399', '#818cf8', '#64748b',
@@ -229,11 +270,15 @@ export function ReportBarChart({
   data,
   color = '#0d9488',
   leftMargin = 120,
+  showTable = false,
+  tableLabel,
 }: {
   title: string;
   data: ChartRow[];
   color?: string;
   leftMargin?: number;
+  showTable?: boolean;
+  tableLabel?: string;
 }) {
   const barHeight = Math.max(450, data.length * 36);
   return (
@@ -247,11 +292,12 @@ export function ReportBarChart({
           <Bar dataKey="value" name="Clients" fill={color} radius={[0, 4, 4, 0]} />
         </BarChart>
       </ResponsiveContainer>
+      {showTable && <DataTable data={data} categoryLabel={tableLabel ?? title} />}
     </ChartCard>
   );
 }
 
-export function ReportProvinceChart({ data }: { data: ChartRow[] }) {
+export function ReportProvinceChart({ data, showTable }: { data: ChartRow[]; showTable?: boolean }) {
   return (
     <ChartCard title="Clients by Province">
       <ResponsiveContainer width="100%" height={450}>
@@ -269,6 +315,7 @@ export function ReportProvinceChart({ data }: { data: ChartRow[] }) {
           <Bar dataKey="value" name="Clients" fill="#fb923c" radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
+      {showTable && <DataTable data={data} categoryLabel="Province" />}
     </ChartCard>
   );
 }

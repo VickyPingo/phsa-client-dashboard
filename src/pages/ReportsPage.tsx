@@ -89,36 +89,46 @@ export default function ReportsPage(_: Props) {
       ) : (
         <div className="flex flex-col gap-5">
           <ContactTimeChart data={stats.timeBands} />
-          <ReportProvinceChart data={stats.byProvince} />
+          <ReportProvinceChart data={stats.byProvince} showTable />
           <ReportBarChart
             title="Reason for Contact"
             data={stats.byReason}
             color="#0d9488"
             leftMargin={160}
+            showTable
+            tableLabel="Reason for Contact"
           />
           <ReportBarChart
             title="How Clients Found PHSA"
             data={stats.byHowFound}
             color="#22d3ee"
             leftMargin={160}
+            showTable
+            tableLabel="How Found PHSA"
           />
           <ReportBarChart
             title="Decisions"
             data={stats.byDecision.map((r: ChartRow) => ({ name: decisionLabel(r.name), value: r.value }))}
             color="#fb7185"
             leftMargin={120}
+            showTable
+            tableLabel="Decision"
           />
           <ReportBarChart
             title="Conclusions"
             data={stats.byConclusion}
             color="#34d399"
             leftMargin={120}
+            showTable
+            tableLabel="Conclusion"
           />
           <ReportBarChart
             title="Cases per Volunteer"
             data={stats.byVolunteer}
             color="#f59e0b"
             leftMargin={100}
+            showTable
+            tableLabel="Volunteer"
           />
         </div>
       )}

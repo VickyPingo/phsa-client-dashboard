@@ -1,42 +1,35 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
+import { supabase } from '../lib/supabase';
 import { Client } from '../lib/types';
-import { countByKey, csvExport, downloadCsv, calcAverageAge, decisionLabel } from '../lib/utils';
-import { Download, Printer, BarChart3, Users, MapPin, Heart } from 'lucide-react';
+import { csvExport, downloadCsv, decisionLabel } from '../lib/utils';
+import { Download, Printer, BarChart3, Users, MapPin, Heart, Loader2 } from 'lucide-react';
 import { ContactTimeChart } from '../components/Dashboard/Charts';
+import { useReportData } from '../hooks/useReportData';
 
+// clients prop is kept for backwards compat but no longer used for stats
 interface Props {
   clients: Client[];
 }
 
-export default function ReportsPage({ clients }: Props) {
+export default function ReportsPage(_: Props) {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [exporting, setExporting] = useState(false);
 
-  const filtered = useMemo(() => {
-    return clients.filter(c => {
-      if (dateFrom && c.first_contact_date && c.first_contact_date < dateFrom) return false;
-      if (dateTo && c.first_contact_date && c.first_contact_date > dateTo) return false;
-      return true;
-    });
-  }, [clients, dateFrom, dateTo]);
+  const { stats, loading } = useReportData(dateFrom, dateTo);
+  const { kpis } = stats;
 
-  const stats = useMemo(() => ({
-    total: filtered.length,
-    female: filtered.filter(c => c.sex === 'F').length,
-    male: filtered.filter(c => c.sex === 'M').length,
-    avgAge: calcAverageAge(filtered),
-    referrals: filtered.filter(c => c.referral_1 || c.referral_2).length,
-    testimonies: filtered.filter(c => c.testimony_potential === 'Yes').length,
-    byProvince: countByKey(filtered, 'province'),
-    byReason: countByKey(filtered, 'reason_for_contact'),
-    byVolunteer: countByKey(filtered, 'volunteer'),
-    byDecision: countByKey(filtered.filter(c => c.decision), 'decision'),
-    byConclusion: countByKey(filtered.filter(c => c.conclusion), 'conclusion'),
-    byHowFound: countByKey(filtered, 'how_found_us'),
-  }), [filtered]);
+  const avgAgeDisplay = kpis.avg_age !== null ? String(kpis.avg_age) : '—';
 
-  const handleExportCsv = () => {
-    const csv = csvExport(filtered);
+  const handleExportCsv = async () => {
+    setExporting(true);
+    let query = supabase.from('phsa_clients').select('*').limit(10000).order('first_contact_date', { ascending: false });
+    if (dateFrom) query = query.gte('first_contact_date', dateFrom);
+    if (dateTo)   query = query.lte('first_contact_date', dateTo);
+    const { data } = await query;
+    setExporting(false);
+    if (!data?.length) return;
+    const csv = csvExport(data as Client[]);
     const label = dateFrom && dateTo ? `${dateFrom}_to_${dateTo}` : 'all';
     downloadCsv(csv, `phsa-clients-${label}.csv`);
   };
@@ -55,8 +48,9 @@ export default function ReportsPage({ clients }: Props) {
             <input type="date" className="input w-auto" value={dateTo} onChange={e => setDateTo(e.target.value)} />
           </div>
           <div className="flex gap-2">
-            <button onClick={handleExportCsv} className="btn-primary">
-              <Download className="w-4 h-4" /> Export CSV
+            <button onClick={handleExportCsv} disabled={exporting} className="btn-primary">
+              {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              Export CSV
             </button>
             <button onClick={() => window.print()} className="btn-secondary">
               <Printer className="w-4 h-4" /> Print
@@ -72,12 +66,12 @@ export default function ReportsPage({ clients }: Props) {
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 print:grid-cols-3">
         {[
-          { label: 'Total Clients', value: stats.total, icon: Users, color: 'text-primary-600' },
-          { label: 'Female', value: stats.female, icon: Users, color: 'text-rose-500' },
-          { label: 'Male', value: stats.male, icon: Users, color: 'text-blue-500' },
-          { label: 'Avg Age', value: stats.avgAge, icon: BarChart3, color: 'text-amber-500' },
-          { label: 'Referrals', value: stats.referrals, icon: MapPin, color: 'text-emerald-500' },
-          { label: 'Testimonies', value: stats.testimonies, icon: Heart, color: 'text-accent-500' },
+          { label: 'Total Clients', value: loading ? '…' : kpis.total, icon: Users, color: 'text-primary-600' },
+          { label: 'Female', value: loading ? '…' : kpis.female, icon: Users, color: 'text-rose-500' },
+          { label: 'Male', value: loading ? '…' : kpis.male, icon: Users, color: 'text-blue-500' },
+          { label: 'Avg Age', value: loading ? '…' : avgAgeDisplay, icon: BarChart3, color: 'text-amber-500' },
+          { label: 'Referrals', value: loading ? '…' : kpis.referrals, icon: MapPin, color: 'text-emerald-500' },
+          { label: 'Testimonies', value: loading ? '…' : kpis.testimony, icon: Heart, color: 'text-accent-500' },
         ].map(s => (
           <div key={s.label} className="card p-4 text-center">
             <s.icon className={`w-5 h-5 ${s.color} mx-auto mb-2`} />
@@ -87,15 +81,25 @@ export default function ReportsPage({ clients }: Props) {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <ContactTimeChart clients={filtered} />
-        <StatTable title="By Province" data={stats.byProvince} total={stats.total} />
-        <StatTable title="Reason for Contact" data={stats.byReason} total={stats.total} />
-        <StatTable title="How Clients Found PHSA" data={stats.byHowFound} total={stats.total} />
-        <StatTable title="Decisions" data={Object.fromEntries(Object.entries(stats.byDecision).map(([k, v]) => [decisionLabel(k), v]))} total={stats.total} />
-        <StatTable title="Conclusions" data={stats.byConclusion} total={stats.total} />
-        <StatTable title="Cases per Volunteer" data={stats.byVolunteer} total={stats.total} />
-      </div>
+      {loading ? (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <ContactTimeChart bands={stats.timeBands} />
+          <StatTable title="By Province" data={stats.byProvince} total={kpis.total} />
+          <StatTable title="Reason for Contact" data={stats.byReason} total={kpis.total} />
+          <StatTable title="How Clients Found PHSA" data={stats.byHowFound} total={kpis.total} />
+          <StatTable
+            title="Decisions"
+            data={Object.fromEntries(Object.entries(stats.byDecision).map(([k, v]) => [decisionLabel(k), v]))}
+            total={kpis.total}
+          />
+          <StatTable title="Conclusions" data={stats.byConclusion} total={kpis.total} />
+          <StatTable title="Cases per Volunteer" data={stats.byVolunteer} total={kpis.total} />
+        </div>
+      )}
     </div>
   );
 }

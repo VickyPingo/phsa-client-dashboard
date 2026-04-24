@@ -185,25 +185,10 @@ export function DecisionChart({ clients }: { clients: Client[] }) {
   );
 }
 
-const TIME_BANDS = [
-  { label: 'Morning',     start: 6,  end: 12 },
-  { label: 'Lunch',       start: 12, end: 14 },
-  { label: 'Afternoon',   start: 14, end: 18 },
-  { label: 'Evening',     start: 18, end: 21 },
-  { label: 'Night',       start: 21, end: 24 },
-  { label: 'Early Hours', start: 0,  end: 6  },
-];
+const TIME_BAND_ORDER = ['Morning', 'Lunch', 'Afternoon', 'Evening', 'Night', 'Early Hours'];
 
-export function ContactTimeChart({ clients }: { clients: Client[] }) {
-  const data = TIME_BANDS.map(band => {
-    const count = clients.filter(c => {
-      if (!c.first_contact_time) return false;
-      const hour = parseInt(c.first_contact_time.slice(0, 2), 10);
-      return hour >= band.start && hour < band.end;
-    }).length;
-    return { name: band.label, count };
-  });
-
+export function ContactTimeChart({ bands }: { bands: Record<string, number> }) {
+  const data = TIME_BAND_ORDER.map(name => ({ name, count: bands[name] ?? 0 }));
   const total = data.reduce((s, d) => s + d.count, 0);
 
   return (

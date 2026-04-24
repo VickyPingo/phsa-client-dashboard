@@ -17,10 +17,10 @@ const EMPTY: DashboardCharts = {
   byProvince: [], byDecision: [], byConclusion: [], timeBands: [],
 };
 
-type RpcRow = { name: string; value: number };
+type RpcRow = { label: string; count: number };
 
 function normalize(data: RpcRow[] | null): ChartRow[] {
-  return (data ?? []).map(r => ({ name: r.name, value: Number(r.value) }));
+  return (data ?? []).map(r => ({ name: r.label, value: Number(r.count) }));
 }
 
 const NO_DATE = { date_from: null, date_to: null };

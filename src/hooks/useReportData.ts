@@ -29,10 +29,10 @@ const EMPTY_STATS: ReportStats = {
   byVolunteer: [], byDecision: [], byConclusion: [], timeBands: [],
 };
 
-type RpcRow = { name: string; value: number };
+type RpcRow = { label: string; count: number };
 
 function normalize(data: RpcRow[] | null): ChartRow[] {
-  return (data ?? []).map(r => ({ name: r.name, value: Number(r.value) }));
+  return (data ?? []).map(r => ({ name: r.label, value: Number(r.count) }));
 }
 
 export function useReportData(dateFrom: string, dateTo: string) {

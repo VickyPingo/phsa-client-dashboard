@@ -49,7 +49,7 @@ export default function ClientsPage({ onRefresh, onAddNew }: Props) {
   const fetchRows = useCallback(async () => {
     setLoading(true);
     let query = supabase
-      .from('clients')
+      .from('phsa_clients')
       .select('*', { count: 'exact' })
       .order('first_contact_date', { ascending: false })
       .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
@@ -74,7 +74,7 @@ export default function ClientsPage({ onRefresh, onAddNew }: Props) {
 
   const handleUpdate = async (id: string, data: ClientInsert) => {
     const { error } = await supabase
-      .from('clients')
+      .from('phsa_clients')
       .update({ ...data, updated_at: new Date().toISOString() })
       .eq('id', id);
     if (error) throw new Error(error.message);
@@ -87,7 +87,7 @@ export default function ClientsPage({ onRefresh, onAddNew }: Props) {
   };
 
   const handleDelete = async (id: string) => {
-    const { error } = await supabase.from('clients').delete().eq('id', id);
+    const { error } = await supabase.from('phsa_clients').delete().eq('id', id);
     if (error) throw new Error(error.message);
     await fetchRows();
     onRefresh();

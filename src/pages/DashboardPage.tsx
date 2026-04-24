@@ -23,7 +23,7 @@ export default function DashboardPage({ clients }: Props) {
   // Fetch total client count once
   useEffect(() => {
     supabase
-      .from('clients')
+      .from('phsa_clients')
       .select('*', { count: 'exact', head: true })
       .then(({ count }) => { if (count !== null) setTotalCount(count); });
   }, []);
@@ -32,7 +32,7 @@ export default function DashboardPage({ clients }: Props) {
   useEffect(() => {
     setMonthlyLoading(true);
     supabase
-      .from('clients')
+      .from('phsa_clients')
       .select('first_contact_date')
       .gte('first_contact_date', `${year}-01-01`)
       .lte('first_contact_date', `${year}-12-31`)

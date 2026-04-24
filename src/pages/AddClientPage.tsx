@@ -46,7 +46,7 @@ export default function AddClientPage({ onSuccess }: Props) {
   };
 
   const handleSave = async (data: ClientInsert) => {
-    const { error } = await supabase.from('clients').insert(data);
+    const { error } = await supabase.from('phsa_clients').insert(data);
     if (error) throw error;
     setSaved(true);
     setTimeout(() => {

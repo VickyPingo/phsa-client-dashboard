@@ -16,7 +16,7 @@ export default function App() {
 
   const fetchClients = useCallback(async () => {
     const { data, error } = await supabase
-      .from('clients')
+      .from('phsa_clients')
       .select('*')
       .order('first_contact_date', { ascending: false });
     if (error) console.error('Failed to fetch clients:', error.message);

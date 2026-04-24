@@ -11,7 +11,7 @@ interface Props {
 const empty: ClientInsert = {
   first_contact_date: null,
   client_name: '',
-  volunteer_name: null,
+  volunteer: null,
   age: null,
   sex: null,
   reason_for_contact: null,
@@ -70,7 +70,7 @@ export default function ClientForm({ initial, onSubmit, onCancel, submitLabel = 
           <input type="date" className="input" value={form.first_contact_date ?? ''} onChange={e => set('first_contact_date', e.target.value)} />
         </Field>
         <Field label="Volunteer">
-          <select className="select" value={form.volunteer_name ?? ''} onChange={e => set('volunteer_name', e.target.value)}>
+          <select className="select" value={form.volunteer ?? ''} onChange={e => set('volunteer', e.target.value)}>
             <option value="">Select volunteer</option>
             {VOLUNTEERS.map(v => <option key={v} value={v}>{v}</option>)}
           </select>

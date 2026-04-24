@@ -2,7 +2,7 @@ export interface Client {
   id: string;
   first_contact_date: string | null;
   client_name: string;
-  volunteer_name: string | null;
+  volunteer: string | null;
   age: string | null;
   sex: string | null;
   reason_for_contact: string | null;

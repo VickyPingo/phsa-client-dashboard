@@ -28,7 +28,7 @@ export default function ReportsPage({ clients }: Props) {
     testimonies: filtered.filter(c => c.testimony_potential === 'Yes').length,
     byProvince: countByKey(filtered, 'province'),
     byReason: countByKey(filtered, 'reason_for_contact'),
-    byVolunteer: countByKey(filtered, 'volunteer_name'),
+    byVolunteer: countByKey(filtered, 'volunteer'),
     byDecision: countByKey(filtered.filter(c => c.decision), 'decision'),
     byConclusion: countByKey(filtered.filter(c => c.conclusion), 'conclusion'),
     byHowFound: countByKey(filtered, 'how_found_phsa'),

@@ -51,11 +51,11 @@ export default function ClientsPage({ onRefresh, onAddNew }: Props) {
     let query = supabase
       .from('phsa_clients')
       .select('*', { count: 'exact' })
-      .order('first_contact_date', { ascending: false })
+      .order('first_contact_date', { ascending: false, nullsFirst: false })
       .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
     if (debouncedSearch) query = query.ilike('client_name', `%${debouncedSearch}%`);
-    if (filters.volunteer)  query = query.eq('volunteer_name', filters.volunteer);
+    if (filters.volunteer)  query = query.eq('volunteer', filters.volunteer);
     if (filters.province)   query = query.eq('province', filters.province);
     if (filters.reason)     query = query.eq('reason_for_contact', filters.reason);
     if (filters.sex)        query = query.eq('sex', filters.sex);

@@ -103,9 +103,9 @@ function TestimonyCard({ client }: { client: Client }) {
               : client.reason_for_contact}
           </span>
         )}
-        {client.volunteer_name && (
+        {client.volunteer && (
           <span className="text-xs bg-accent-50 text-accent-700 px-2 py-0.5 rounded-full font-medium">
-            {client.volunteer_name}
+            {client.volunteer}
           </span>
         )}
       </div>

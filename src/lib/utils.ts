@@ -1,9 +1,11 @@
 import { Client } from './types';
 
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
 export function formatDate(dateStr: string | null): string {
   if (!dateStr) return '—';
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' });
+  const [year, month, day] = dateStr.split('T')[0].split('-').map(Number);
+  return `${day} ${MONTHS[month - 1]} ${year}`;
 }
 
 export function getYear(dateStr: string | null): number | null {
@@ -59,7 +61,7 @@ export function csvExport(clients: Client[]): string {
     'Testimony','Notes'
   ];
   const rows = clients.map(c => [
-    c.id, c.first_contact_date ?? '', c.client_name, c.volunteer_name ?? '',
+    c.id, c.first_contact_date ?? '', c.client_name, c.volunteer ?? '',
     c.age ?? '', c.sex ?? '', c.reason_for_contact ?? '', c.how_found_phsa ?? '',
     c.phone_number ?? '', c.province ?? '', c.referral_1 ?? '', c.referral_2 ?? '',
     c.follow_up_date ?? '', c.made_contact_with_pc ?? '', c.decision ?? '',

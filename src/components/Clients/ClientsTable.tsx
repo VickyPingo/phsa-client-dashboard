@@ -33,7 +33,7 @@ const columns = [
     header: 'Client',
     cell: i => <span className="font-medium text-slate-800">{i.getValue()}</span>,
   }),
-  col.accessor('volunteer_name', {
+  col.accessor('volunteer', {
     header: 'Volunteer',
     cell: i => <span className="text-slate-600 text-xs">{i.getValue() ?? '—'}</span>,
   }),

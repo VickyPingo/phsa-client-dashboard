@@ -63,7 +63,7 @@ export default function ClientDetailModal({ client, onClose, onUpdate, onDelete 
             </span>
           )}
           {client.province && <Badge color="teal">{client.province}</Badge>}
-          {client.volunteer_name && <Badge color="purple">{client.volunteer_name}</Badge>}
+          {client.volunteer && <Badge color="teal">{client.volunteer}</Badge>}
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 p-4 bg-slate-50 rounded-xl">

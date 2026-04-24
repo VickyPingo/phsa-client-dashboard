@@ -186,7 +186,7 @@ export function DecisionChart({ clients }: { clients: Client[] }) {
 }
 
 export function VolunteerChart({ clients }: { clients: Client[] }) {
-  const counts = countByKey(clients.filter(c => c.volunteer_name), 'volunteer_name');
+  const counts = countByKey(clients.filter(c => c.volunteer), 'volunteer');
   const data = Object.entries(counts)
     .sort((a, b) => b[1] - a[1])
     .map(([name, value]) => ({ name, value }));

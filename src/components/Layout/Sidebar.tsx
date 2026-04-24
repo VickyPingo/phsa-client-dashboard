@@ -1,4 +1,5 @@
-import { LayoutDashboard, Users, UserPlus, Heart, FileText, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Users, UserPlus, Heart, FileText, X, LogOut } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 import { Page } from '../../lib/types';
 
 interface SidebarProps {
@@ -54,10 +55,17 @@ export default function Sidebar({ currentPage, onNavigate, mobileOpen, onMobileT
         })}
       </nav>
 
-      <div className="px-4 py-4 border-t border-white/10">
+      <div className="px-3 py-4 border-t border-white/10 space-y-3">
         <p className="text-white/40 text-xs text-center">
           Pregnancy Help South Africa
         </p>
+        <button
+          onClick={() => supabase.auth.signOut()}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white transition-all"
+        >
+          <LogOut style={{ width: 18, height: 18 }} className="flex-shrink-0" />
+          Sign out
+        </button>
       </div>
     </div>
   );

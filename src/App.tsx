@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import type { Session } from '@supabase/supabase-js';
 import { supabase } from './lib/supabase';
 import { Client, Page } from './lib/types';
 import Layout from './components/Layout/Layout';
@@ -7,14 +8,29 @@ import ClientsPage from './pages/ClientsPage';
 import AddClientPage from './pages/AddClientPage';
 import TestimoniesPage from './pages/TestimoniesPage';
 import ReportsPage from './pages/ReportsPage';
+import LoginPage from './pages/LoginPage';
 import Spinner from './components/ui/Spinner';
 
 export default function App() {
+  const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [page, setPage] = useState<Page>('dashboard');
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   const fetchClients = useCallback(async () => {
+    setLoading(true);
     const { data, error } = await supabase
       .from('phsa_clients')
       .select('*')
@@ -25,13 +41,26 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    fetchClients();
-  }, [fetchClients]);
+    if (session) fetchClients();
+  }, [session, fetchClients]);
 
   const handleAddSuccess = () => {
     fetchClients();
     setPage('clients');
   };
+
+  // Still resolving auth state
+  if (session === undefined) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <LoginPage />;
+  }
 
   return (
     <Layout currentPage={page} onNavigate={setPage}>

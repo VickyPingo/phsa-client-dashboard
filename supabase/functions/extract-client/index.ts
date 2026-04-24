@@ -1,16 +1,11 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
-
-const VOLUNTEERS = [
-  'Anri', 'Steph', 'Jane', 'Lynn H', 'Lyn VB',
-  'Rebecca', 'Renette', 'Mandisa', 'Mari', 'Marietjie',
-  'Melanie', 'Anne', 'Joan',
-];
 
 const PROVINCES = [
   'Gauteng', 'KZN', 'Free State', 'Limpopo', 'Mpumalanga',
@@ -60,6 +55,17 @@ Deno.serve(async (req: Request) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Fetch active volunteers from DB so the list stays in sync
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const db = createClient(supabaseUrl, supabaseKey);
+    const { data: volunteerRows } = await db
+      .from("phsa_volunteers")
+      .select("name")
+      .eq("is_active", true)
+      .order("name", { ascending: true });
+    const VOLUNTEERS = (volunteerRows ?? []).map((r: { name: string }) => r.name);
 
     const today = new Date().toISOString().split("T")[0];
 

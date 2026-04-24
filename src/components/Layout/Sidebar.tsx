@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, UserPlus, Heart, FileText, X, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, UserPlus, Heart, FileText, Settings, X, LogOut } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { Page } from '../../lib/types';
 
@@ -15,6 +15,7 @@ const navItems: { page: Page; label: string; icon: React.ElementType }[] = [
   { page: 'add-client', label: 'Add Client', icon: UserPlus },
   { page: 'testimonies', label: 'Testimonies', icon: Heart },
   { page: 'reports', label: 'Reports', icon: FileText },
+  { page: 'settings', label: 'Settings', icon: Settings },
 ];
 
 export default function Sidebar({ currentPage, onNavigate, mobileOpen, onMobileToggle }: SidebarProps) {

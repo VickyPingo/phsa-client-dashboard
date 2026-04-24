@@ -8,6 +8,7 @@ import ClientsPage from './pages/ClientsPage';
 import AddClientPage from './pages/AddClientPage';
 import TestimoniesPage from './pages/TestimoniesPage';
 import ReportsPage from './pages/ReportsPage';
+import SettingsPage from './pages/SettingsPage';
 import LoginPage from './pages/LoginPage';
 import Spinner from './components/ui/Spinner';
 
@@ -85,6 +86,7 @@ export default function App() {
           )}
           {page === 'testimonies' && <TestimoniesPage />}
           {page === 'reports' && <ReportsPage clients={clients} />}
+          {page === 'settings' && <SettingsPage />}
         </>
       )}
     </Layout>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Client, ClientInsert, VOLUNTEERS, PROVINCES, REASONS_FOR_CONTACT, HOW_FOUND_OPTIONS, CONCLUSIONS, DECISIONS, MADE_CONTACT_OPTIONS } from '../../lib/types';
+import { Client, ClientInsert, PROVINCES, REASONS_FOR_CONTACT, HOW_FOUND_OPTIONS, CONCLUSIONS, DECISIONS, MADE_CONTACT_OPTIONS } from '../../lib/types';
+import { useVolunteers } from '../../hooks/useVolunteers';
 
 interface Props {
   initial?: Partial<ClientInsert>;
@@ -34,6 +35,7 @@ const empty: ClientInsert = {
 export default function ClientForm({ initial, onSubmit, onCancel, submitLabel = 'Save Client' }: Props) {
   const [form, setForm] = useState<ClientInsert>({ ...empty, ...initial });
   const [saving, setSaving] = useState(false);
+  const { activeNames: volunteerNames } = useVolunteers();
 
   useEffect(() => {
     if (initial) setForm({ ...empty, ...initial });
@@ -76,7 +78,7 @@ export default function ClientForm({ initial, onSubmit, onCancel, submitLabel = 
         <Field label="Volunteer">
           <select className="select" value={form.volunteer ?? ''} onChange={e => set('volunteer', e.target.value)}>
             <option value="">Select volunteer</option>
-            {VOLUNTEERS.map(v => <option key={v} value={v}>{v}</option>)}
+            {volunteerNames.map(v => <option key={v} value={v}>{v}</option>)}
           </select>
         </Field>
         <Field label="Phone Number">

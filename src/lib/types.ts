@@ -88,4 +88,13 @@ export interface Testimony {
   updated_at: string;
 }
 
-export type Page = 'dashboard' | 'clients' | 'add-client' | 'testimonies' | 'reports';
+export interface Volunteer {
+  id: string;
+  name: string;
+  email: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type Page = 'dashboard' | 'clients' | 'add-client' | 'testimonies' | 'reports' | 'settings';

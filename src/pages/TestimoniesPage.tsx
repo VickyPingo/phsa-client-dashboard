@@ -93,7 +93,7 @@ export default function TestimoniesPage() {
 }
 
 function TestimonyCard({ testimony: t }: { testimony: Testimony }) {
-  const displayText = t.testimony_edited ?? t.testimony_text;
+  const displayText = t.testimony_edited?.trim() || t.testimony_text?.trim() || null;
 
   return (
     <div className="card p-5 flex flex-col gap-4 hover:shadow-md transition-shadow">
@@ -139,7 +139,7 @@ function TestimonyCard({ testimony: t }: { testimony: Testimony }) {
         </div>
       )}
 
-      {t.testimony_edited && (
+      {t.testimony_edited?.trim() && (
         <p className="text-xs text-accent-600 font-medium">Edited version</p>
       )}
     </div>

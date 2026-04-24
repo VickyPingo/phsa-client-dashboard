@@ -79,6 +79,8 @@ export interface Testimony {
   first_contact_date: string | null;
   testimony_text: string | null;
   testimony_edited: string | null;
+  testimony_received_date: string | null;
+  published_date: string | null;
   province: string | null;
   reason_for_contact: string | null;
   created_at: string;

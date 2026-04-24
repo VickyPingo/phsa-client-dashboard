@@ -29,12 +29,10 @@ const EMPTY_STATS: ReportStats = {
   byVolunteer: [], byDecision: [], byConclusion: [], timeBands: [],
 };
 
-// Convert the json_object_agg result from report_group_by into sorted ChartRow[]
-function toChartRows(obj: Record<string, number> | null): ChartRow[] {
-  if (!obj) return [];
-  return Object.entries(obj)
-    .map(([name, value]) => ({ name, value: Number(value) }))
-    .sort((a, b) => b.value - a.value);
+type RpcRow = { label: string; count: number };
+
+function normalize(data: RpcRow[] | null): ChartRow[] {
+  return (data ?? []).map(r => ({ name: r.label, value: r.count }));
 }
 
 export function useReportData(dateFrom: string, dateTo: string) {
@@ -44,56 +42,61 @@ export function useReportData(dateFrom: string, dateTo: string) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const df = dateFrom || null;
-      const dt = dateTo   || null;
-
-      let testimonyQuery = supabase
-        .from('phsa_clients')
-        .select('*', { count: 'exact', head: true })
-        .in('testimony_potential', ['Yes', 'Asked', 'Received', 'Provided']);
-      if (df) testimonyQuery = testimonyQuery.gte('first_contact_date', df);
-      if (dt) testimonyQuery = testimonyQuery.lte('first_contact_date', dt);
+      const buildCount = (base: ReturnType<typeof supabase.from>) => {
+        let q = base.select('*', { count: 'exact', head: true });
+        if (dateFrom) q = q.gte('first_contact_date', dateFrom);
+        if (dateTo)   q = q.lte('first_contact_date', dateTo);
+        return q;
+      };
 
       const [
-        kpisRes,
+        { count: totalCount },
+        { count: femaleCount },
+        { count: maleCount },
+        { count: referralCount },
         { count: testimonyCount },
-        provinceRes,
-        reasonRes,
-        howFoundRes,
-        volunteerRes,
-        decisionRes,
-        conclusionRes,
-        timeBandsRes,
+        { data: avgAgeData },
+        { data: reasonData },
+        { data: howFoundData },
+        { data: volunteerData },
+        { data: provinceData },
+        { data: decisionData },
+        { data: conclusionData },
+        { data: timeBandData },
       ] = await Promise.all([
-        supabase.rpc('report_kpis',               { date_from: df, date_to: dt }),
-        testimonyQuery,
-        supabase.rpc('report_group_by',            { col: 'province',            date_from: df, date_to: dt }),
-        supabase.rpc('report_group_by',            { col: 'reason_for_contact',   date_from: df, date_to: dt }),
-        supabase.rpc('report_group_by',            { col: 'how_found_us',         date_from: df, date_to: dt }),
-        supabase.rpc('report_group_by',            { col: 'volunteer',            date_from: df, date_to: dt }),
-        supabase.rpc('report_group_by',            { col: 'decision',             date_from: df, date_to: dt }),
-        supabase.rpc('report_group_by',            { col: 'conclusion',           date_from: df, date_to: dt }),
-        supabase.rpc('report_contact_time_bands',  { date_from: df, date_to: dt }),
+        buildCount(supabase.from('phsa_clients')),
+        buildCount(supabase.from('phsa_clients')).eq('sex', 'F'),
+        buildCount(supabase.from('phsa_clients')).eq('sex', 'M'),
+        buildCount(supabase.from('phsa_clients'))
+          .or('referral_1.neq.null,referral_2.neq.null'),
+        buildCount(supabase.from('phsa_clients'))
+          .in('testimony_potential', ['Yes', 'Asked', 'Received', 'Provided']),
+        supabase.rpc('get_avg_age'),
+        supabase.rpc('get_reason_counts'),
+        supabase.rpc('get_how_found_counts'),
+        supabase.rpc('get_volunteer_counts'),
+        supabase.rpc('get_province_counts'),
+        supabase.rpc('get_decision_counts'),
+        supabase.rpc('get_conclusion_counts'),
+        supabase.rpc('get_time_band_counts'),
       ]);
-
-      const kpis = kpisRes.data as ReportKPIs | null;
 
       setStats({
         kpis: {
-          total:     kpis?.total     ?? 0,
-          female:    kpis?.female    ?? 0,
-          male:      kpis?.male      ?? 0,
-          referrals: kpis?.referrals ?? 0,
-          testimony: testimonyCount  ?? 0,
-          avg_age:   kpis?.avg_age   ?? null,
+          total:     totalCount     ?? 0,
+          female:    femaleCount    ?? 0,
+          male:      maleCount      ?? 0,
+          referrals: referralCount  ?? 0,
+          testimony: testimonyCount ?? 0,
+          avg_age:   avgAgeData != null ? Number(avgAgeData) : null,
         },
-        byProvince:  toChartRows(provinceRes.data),
-        byReason:    toChartRows(reasonRes.data),
-        byHowFound:  toChartRows(howFoundRes.data),
-        byVolunteer: toChartRows(volunteerRes.data),
-        byDecision:  toChartRows(decisionRes.data),
-        byConclusion:toChartRows(conclusionRes.data),
-        timeBands:   toChartRows(timeBandsRes.data),
+        byReason:    normalize(reasonData as RpcRow[]),
+        byHowFound:  normalize(howFoundData as RpcRow[]),
+        byVolunteer: normalize(volunteerData as RpcRow[]),
+        byProvince:  normalize(provinceData as RpcRow[]),
+        byDecision:  normalize(decisionData as RpcRow[]),
+        byConclusion:normalize(conclusionData as RpcRow[]),
+        timeBands:   normalize(timeBandData as RpcRow[]),
       });
     } finally {
       setLoading(false);

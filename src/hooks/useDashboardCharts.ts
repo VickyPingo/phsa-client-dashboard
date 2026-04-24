@@ -17,15 +17,10 @@ const EMPTY: DashboardCharts = {
   byProvince: [], byDecision: [], byConclusion: [], timeBands: [],
 };
 
-function toChartRows(obj: Record<string, number> | null): ChartRow[] {
-  if (!obj) return [];
-  return Object.entries(obj)
-    .map(([name, value]) => ({ name, value: Number(value) }))
-    .sort((a, b) => b.value - a.value);
-}
+type RpcRow = { label: string; count: number };
 
-function groupBy(col: string) {
-  return supabase.rpc('report_group_by', { col, date_from: null, date_to: null });
+function normalize(data: RpcRow[] | null): ChartRow[] {
+  return (data ?? []).map(r => ({ name: r.label, value: r.count }));
 }
 
 export function useDashboardCharts() {
@@ -34,22 +29,22 @@ export function useDashboardCharts() {
 
   useEffect(() => {
     Promise.all([
-      groupBy('reason_for_contact'),
-      groupBy('how_found_us'),
-      groupBy('volunteer'),
-      groupBy('province'),
-      groupBy('decision'),
-      groupBy('conclusion'),
-      supabase.rpc('report_contact_time_bands', { date_from: null, date_to: null }),
+      supabase.rpc('get_reason_counts'),
+      supabase.rpc('get_how_found_counts'),
+      supabase.rpc('get_volunteer_counts'),
+      supabase.rpc('get_province_counts'),
+      supabase.rpc('get_decision_counts'),
+      supabase.rpc('get_conclusion_counts'),
+      supabase.rpc('get_time_band_counts'),
     ]).then(([reason, howFound, volunteer, province, decision, conclusion, timeBands]) => {
       setCharts({
-        byReason:    toChartRows(reason.data),
-        byHowFound:  toChartRows(howFound.data),
-        byVolunteer: toChartRows(volunteer.data),
-        byProvince:  toChartRows(province.data),
-        byDecision:  toChartRows(decision.data),
-        byConclusion:toChartRows(conclusion.data),
-        timeBands:   toChartRows(timeBands.data),
+        byReason:    normalize(reason.data),
+        byHowFound:  normalize(howFound.data),
+        byVolunteer: normalize(volunteer.data),
+        byProvince:  normalize(province.data),
+        byDecision:  normalize(decision.data),
+        byConclusion:normalize(conclusion.data),
+        timeBands:   normalize(timeBands.data),
       });
       setLoading(false);
     });

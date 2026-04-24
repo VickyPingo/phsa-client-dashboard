@@ -37,39 +37,25 @@ export default function DashboardPage(_: Props) {
   const { charts, loading: chartsLoading } = useDashboardCharts();
 
   useEffect(() => {
-    async function loadKPIs() {
-      const [kpisRes, testimonyRes, refData] = await Promise.all([
-        // report_kpis already has total, female, male, avg_age
-        supabase.rpc('report_kpis', { date_from: null, date_to: null }),
-        // testimony_potential: count rows matching any of these values
-        supabase.from('phsa_clients').select('*', { count: 'exact', head: true })
-          .in('testimony_potential', ['Yes', 'Asked', 'Received', 'Provided']),
-        // referrals: need referral_1 + referral_2, fetch both columns for all rows
-        supabase.from('phsa_clients').select('referral_1,referral_2').range(0, 9999),
-      ]);
-
-      const kpisData = kpisRes.data as {
-        total: number; female: number; male: number; avg_age: number | null;
-      } | null;
-
-      // Count rows where either referral field is non-empty
-      const referrals = ((refData.data ?? []) as { referral_1: string | null; referral_2: string | null }[])
-        .filter(r =>
-          (r.referral_1 && r.referral_1.trim() !== '') ||
-          (r.referral_2 && r.referral_2.trim() !== '')
-        ).length;
-
+    Promise.all([
+      supabase.from('phsa_clients').select('*', { count: 'exact', head: true }),
+      supabase.from('phsa_clients').select('*', { count: 'exact', head: true }).eq('sex', 'F'),
+      supabase.from('phsa_clients').select('*', { count: 'exact', head: true }).eq('sex', 'M'),
+      supabase.from('phsa_clients').select('*', { count: 'exact', head: true })
+        .or('referral_1.neq.null,referral_2.neq.null'),
+      supabase.from('phsa_clients').select('*', { count: 'exact', head: true })
+        .in('testimony_potential', ['Yes', 'Asked', 'Received', 'Provided']),
+      supabase.rpc('get_avg_age'),
+    ]).then(([total, female, male, referrals, testimony, avgAge]) => {
       setKpis({
-        total:              kpisData?.total    ?? null,
-        women:              kpisData?.female   ?? null,
-        men:                kpisData?.male     ?? null,
-        avgAge:             kpisData?.avg_age  ?? null,
-        referrals,
-        testimonyPotential: testimonyRes.count ?? null,
+        total:              total.count     ?? null,
+        women:              female.count    ?? null,
+        men:                male.count      ?? null,
+        referrals:          referrals.count ?? null,
+        testimonyPotential: testimony.count ?? null,
+        avgAge:             avgAge.data != null ? Number(avgAge.data) : null,
       });
-    }
-
-    loadKPIs();
+    });
   }, []);
 
   useEffect(() => {

@@ -33,6 +33,7 @@ export default function AddClientPage({ onSuccess }: Props) {
       const mapped: Partial<ClientInsert> = {
         client_name:        data.clientName        || '',
         first_contact_date: data.firstContactDate  || today,
+        first_contact_time: data.firstContactTime  || null,
         volunteer:          data.volunteer         || null,
         age:                data.age ? String(data.age) : null,
         sex:                data.sex               || null,

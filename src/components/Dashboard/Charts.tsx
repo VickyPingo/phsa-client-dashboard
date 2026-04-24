@@ -185,6 +185,46 @@ export function DecisionChart({ clients }: { clients: Client[] }) {
   );
 }
 
+const TIME_BANDS = [
+  { label: 'Morning',     start: 6,  end: 12 },
+  { label: 'Lunch',       start: 12, end: 14 },
+  { label: 'Afternoon',   start: 14, end: 18 },
+  { label: 'Evening',     start: 18, end: 21 },
+  { label: 'Night',       start: 21, end: 24 },
+  { label: 'Early Hours', start: 0,  end: 6  },
+];
+
+export function ContactTimeChart({ clients }: { clients: Client[] }) {
+  const data = TIME_BANDS.map(band => {
+    const count = clients.filter(c => {
+      if (!c.first_contact_time) return false;
+      const hour = parseInt(c.first_contact_time.slice(0, 2), 10);
+      return hour >= band.start && hour < band.end;
+    }).length;
+    return { name: band.label, count };
+  });
+
+  const total = data.reduce((s, d) => s + d.count, 0);
+
+  return (
+    <ChartCard title="Time of First Contact">
+      <ResponsiveContainer width="100%" height={220}>
+        <BarChart data={data} margin={{ top: 0, right: 4, left: -20, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+          <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#94a3b8' }} />
+          <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} allowDecimals={false} />
+          <Tooltip content={<CustomTooltip />} />
+          <Bar dataKey="count" name="Clients" fill="#22d3ee" radius={[4, 4, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+      {total === 0 && (
+        <p className="text-xs text-slate-400 text-center -mt-2">No time data yet</p>
+      )}
+      <p className="text-xs text-slate-400 mt-2">Based on clients added via chat extraction</p>
+    </ChartCard>
+  );
+}
+
 export function VolunteerChart({ clients }: { clients: Client[] }) {
   const counts = countByKey(clients.filter(c => c.volunteer), 'volunteer');
   const data = Object.entries(counts)

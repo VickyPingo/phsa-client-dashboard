@@ -1,6 +1,7 @@
 export interface Client {
   id: string;
   first_contact_date: string | null;
+  first_contact_time: string | null;
   client_name: string;
   volunteer: string | null;
   age: string | null;

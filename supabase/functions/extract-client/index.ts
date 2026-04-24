@@ -67,6 +67,7 @@ Deno.serve(async (req: Request) => {
 
 - clientName: string or null — the client's full name
 - firstContactDate: ISO date string YYYY-MM-DD or null — date of first contact (look for date stamps in the chat)
+- firstContactTime: string HH:MM (24-hour) or null — time of first message in the chat (e.g. "09:34"). Look for timestamps on messages.
 - volunteer: string or null — the PHSA volunteer's name. Must exactly match one of: ${JSON.stringify(VOLUNTEERS)}. Null if not found or no match.
 - age: string or null — client's age as a number string (e.g. "24") or "Unknown"
 - sex: "F", "M", "Unknown", or null — F for female, M for male
@@ -118,6 +119,7 @@ ${chat}`;
     const result = {
       clientName:        (parsed.clientName as string | null) ?? null,
       firstContactDate:  (parsed.firstContactDate as string | null) ?? today,
+      firstContactTime:  (parsed.firstContactTime as string | null) ?? null,
       volunteer:         (parsed.volunteer as string | null) ?? null,
       age:               (parsed.age != null ? String(parsed.age) : null),
       sex:               (parsed.sex as string | null) ?? null,

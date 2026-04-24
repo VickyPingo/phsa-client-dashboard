@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { Client } from '../lib/types';
 import { countByKey, csvExport, downloadCsv, calcAverageAge, decisionLabel } from '../lib/utils';
 import { Download, Printer, BarChart3, Users, MapPin, Heart } from 'lucide-react';
+import { ContactTimeChart } from '../components/Dashboard/Charts';
 
 interface Props {
   clients: Client[];
@@ -87,6 +88,7 @@ export default function ReportsPage({ clients }: Props) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <ContactTimeChart clients={filtered} />
         <StatTable title="By Province" data={stats.byProvince} total={stats.total} />
         <StatTable title="Reason for Contact" data={stats.byReason} total={stats.total} />
         <StatTable title="How Clients Found PHSA" data={stats.byHowFound} total={stats.total} />

@@ -10,6 +10,7 @@ interface Props {
 
 const empty: ClientInsert = {
   first_contact_date: null,
+  first_contact_time: null,
   client_name: '',
   volunteer: null,
   age: null,
@@ -68,6 +69,9 @@ export default function ClientForm({ initial, onSubmit, onCancel, submitLabel = 
         </Field>
         <Field label="First Contact Date">
           <input type="date" className="input" value={form.first_contact_date ?? ''} onChange={e => set('first_contact_date', e.target.value)} />
+        </Field>
+        <Field label="First Contact Time">
+          <input type="time" className="input" value={form.first_contact_time ?? ''} onChange={e => set('first_contact_time', e.target.value)} />
         </Field>
         <Field label="Volunteer">
           <select className="select" value={form.volunteer ?? ''} onChange={e => set('volunteer', e.target.value)}>

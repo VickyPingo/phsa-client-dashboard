@@ -17,6 +17,7 @@ export default function App() {
   const [page, setPage] = useState<Page>('dashboard');
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewClientId, setViewClientId] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -79,10 +80,15 @@ export default function App() {
             <ClientsPage
               onRefresh={fetchClients}
               onAddNew={() => setPage('add-client')}
+              initialClientId={viewClientId}
+              onInitialClientOpened={() => setViewClientId(null)}
             />
           )}
           {page === 'add-client' && (
-            <AddClientPage onSuccess={handleAddSuccess} />
+            <AddClientPage
+              onSuccess={handleAddSuccess}
+              onViewClient={(id) => { setViewClientId(id); setPage('clients'); }}
+            />
           )}
           {page === 'testimonies' && <TestimoniesPage />}
           {page === 'reports' && <ReportsPage clients={clients} />}

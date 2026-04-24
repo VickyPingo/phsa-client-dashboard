@@ -11,6 +11,8 @@ const PAGE_SIZE = 50;
 interface Props {
   onRefresh: () => void;
   onAddNew: () => void;
+  initialClientId?: string | null;
+  onInitialClientOpened?: () => void;
 }
 
 const defaultFilters: Filters = {
@@ -24,7 +26,7 @@ const defaultFilters: Filters = {
   conclusion: '',
 };
 
-export default function ClientsPage({ onRefresh, onAddNew }: Props) {
+export default function ClientsPage({ onRefresh, onAddNew, initialClientId, onInitialClientOpened }: Props) {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [filters, setFilters] = useState<Filters>(defaultFilters);
   const [showFilters, setShowFilters] = useState(false);
@@ -71,6 +73,19 @@ export default function ClientsPage({ onRefresh, onAddNew }: Props) {
   }, [page, debouncedSearch, filters.volunteer, filters.province, filters.reason, filters.sex, filters.conclusion, filters.dateFrom, filters.dateTo]);
 
   useEffect(() => { fetchRows(); }, [fetchRows]);
+
+  useEffect(() => {
+    if (!initialClientId) return;
+    supabase
+      .from('phsa_clients')
+      .select('*')
+      .eq('id', initialClientId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) setSelectedClient(data as Client);
+        onInitialClientOpened?.();
+      });
+  }, [initialClientId]);
 
   const handleUpdate = async (id: string, data: ClientInsert) => {
     const { error } = await supabase

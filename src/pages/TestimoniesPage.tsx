@@ -2,41 +2,65 @@ import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { Testimony } from '../lib/types';
 import { formatDate } from '../lib/utils';
-import { Heart, X, ChevronLeft, ChevronRight, Search, Save, Loader2 } from 'lucide-react';
+import { Heart, X, ChevronLeft, ChevronRight, Search, Save, Loader2, Plus } from 'lucide-react';
 
-// ─── Editable Detail Modal ────────────────────────────────────────────────────
+// ─── Shared form type ─────────────────────────────────────────────────────────
+
+const emptyForm = () => ({
+  client_name:             '',
+  first_contact_date:      '',
+  testimony_received_date: '',
+  published_date:          '',
+  testimony_text:          '',
+  testimony_edited:        '',
+});
+
+type FormState = ReturnType<typeof emptyForm>;
+
+// ─── Add / Edit Modal ─────────────────────────────────────────────────────────
 
 function TestimonyModal({
   testimony,
   onClose,
-  onSave,
+  onSaved,
 }: {
-  testimony: Testimony;
+  testimony: Testimony | null; // null = create mode
   onClose: () => void;
-  onSave: (updated: Testimony) => void;
+  onSaved: (t: Testimony, isNew: boolean) => void;
 }) {
-  const [form, setForm] = useState({
-    client_name:            testimony.client_name ?? '',
-    first_contact_date:     testimony.first_contact_date ?? '',
-    testimony_received_date:testimony.testimony_received_date ?? '',
-    published_date:         testimony.published_date ?? '',
-    testimony_text:         testimony.testimony_text ?? '',
-    testimony_edited:       testimony.testimony_edited ?? '',
-  });
+  const [form, setForm] = useState<FormState>(
+    testimony
+      ? {
+          client_name:             testimony.client_name ?? '',
+          first_contact_date:      testimony.first_contact_date ?? '',
+          testimony_received_date: testimony.testimony_received_date ?? '',
+          published_date:          testimony.published_date ?? '',
+          testimony_text:          testimony.testimony_text ?? '',
+          testimony_edited:        testimony.testimony_edited ?? '',
+        }
+      : emptyForm()
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const isNew = !testimony;
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
   }, []);
 
-  const set = (key: keyof typeof form, value: string) =>
+  const set = (key: keyof FormState, value: string) =>
     setForm(f => ({ ...f, [key]: value }));
 
   const handleSave = async () => {
+    if (!form.client_name.trim()) {
+      setError('Client name is required.');
+      return;
+    }
     setSaving(true);
     setError(null);
+
     const payload = {
       client_name:             form.client_name.trim() || null,
       first_contact_date:      form.first_contact_date || null,
@@ -45,16 +69,25 @@ function TestimonyModal({
       testimony_text:          form.testimony_text.trim() || null,
       testimony_edited:        form.testimony_edited.trim() || null,
     };
-    const { error: err } = await supabase
-      .from('phsa_testimonies')
-      .update(payload)
-      .eq('id', testimony.id);
-    setSaving(false);
-    if (err) {
-      setError(err.message);
-      return;
+
+    if (isNew) {
+      const { data, error: err } = await supabase
+        .from('phsa_testimonies')
+        .insert(payload)
+        .select()
+        .single();
+      setSaving(false);
+      if (err) { setError(err.message); return; }
+      onSaved(data as Testimony, true);
+    } else {
+      const { error: err } = await supabase
+        .from('phsa_testimonies')
+        .update(payload)
+        .eq('id', testimony!.id);
+      setSaving(false);
+      if (err) { setError(err.message); return; }
+      onSaved({ ...testimony!, ...payload }, false);
     }
-    onSave({ ...testimony, ...payload });
     onClose();
   };
 
@@ -72,7 +105,14 @@ function TestimonyModal({
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-          <h2 className="font-semibold text-slate-800 text-base">Edit Testimony</h2>
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center">
+              <Heart className="w-3.5 h-3.5 text-white" fill="white" />
+            </div>
+            <h2 className="font-semibold text-slate-800 text-base">
+              {isNew ? 'Add New Testimony' : 'Edit Testimony'}
+            </h2>
+          </div>
           <button
             onClick={onClose}
             className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
@@ -84,17 +124,16 @@ function TestimonyModal({
         {/* Body */}
         <div className="overflow-y-auto flex-1 px-6 py-5 space-y-4">
 
-          {/* Client name */}
-          <Field label="Client Name">
+          <Field label="Client Name *">
             <input
               className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500"
               value={form.client_name}
               onChange={e => set('client_name', e.target.value)}
               placeholder="Full name"
+              autoFocus={isNew}
             />
           </Field>
 
-          {/* Dates row */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Field label="First Contact Date">
               <input
@@ -122,7 +161,6 @@ function TestimonyModal({
             </Field>
           </div>
 
-          {/* Testimony received */}
           <Field label="Testimony Received">
             <textarea
               className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 resize-none"
@@ -133,7 +171,6 @@ function TestimonyModal({
             />
           </Field>
 
-          {/* Edited version */}
           <Field label="Edited Version">
             <textarea
               className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 resize-none"
@@ -159,6 +196,8 @@ function TestimonyModal({
           <button onClick={handleSave} disabled={saving} className="btn-primary text-sm">
             {saving ? (
               <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</>
+            ) : isNew ? (
+              <><Plus className="w-4 h-4" /> Add Testimony</>
             ) : (
               <><Save className="w-4 h-4" /> Save Changes</>
             )}
@@ -176,7 +215,7 @@ const PAGE_SIZE = 50;
 export default function TestimoniesPage() {
   const [testimonies, setTestimonies] = useState<Testimony[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<Testimony | null>(null);
+  const [selected, setSelected] = useState<Testimony | null | 'new'>( null);
   const [yearFilter, setYearFilter] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
@@ -218,8 +257,12 @@ export default function TestimoniesPage() {
 
   useEffect(() => { setPage(0); }, [yearFilter, search]);
 
-  const handleSaved = (updated: Testimony) => {
-    setTestimonies(prev => prev.map(t => t.id === updated.id ? updated : t));
+  const handleSaved = (updated: Testimony, isNew: boolean) => {
+    if (isNew) {
+      setTestimonies(prev => [updated, ...prev]);
+    } else {
+      setTestimonies(prev => prev.map(t => t.id === updated.id ? updated : t));
+    }
   };
 
   const pageCount = Math.ceil(filtered.length / PAGE_SIZE);
@@ -229,13 +272,14 @@ export default function TestimoniesPage() {
 
   return (
     <div className="space-y-4">
+
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
         <div className="flex items-center gap-2 flex-1 max-w-sm">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
-              className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500"
+              className="w-full pl-9 pr-9 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500"
               placeholder="Search by client name..."
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -250,7 +294,7 @@ export default function TestimoniesPage() {
             )}
           </div>
           <select
-            className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500"
+            className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/30"
             value={yearFilter}
             onChange={e => setYearFilter(e.target.value)}
           >
@@ -258,9 +302,18 @@ export default function TestimoniesPage() {
             {years.map(y => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
-        <p className="text-xs text-slate-400">
-          {loading ? 'Loading…' : `${filtered.length} ${filtered.length === 1 ? 'testimony' : 'testimonies'}`}
-        </p>
+
+        <div className="flex items-center gap-3">
+          <p className="text-xs text-slate-400">
+            {loading ? 'Loading…' : `${filtered.length} ${filtered.length === 1 ? 'testimony' : 'testimonies'}`}
+          </p>
+          <button
+            onClick={() => setSelected('new')}
+            className="btn-primary"
+          >
+            <Plus className="w-4 h-4" /> Add Testimony
+          </button>
+        </div>
       </div>
 
       {/* Table */}
@@ -304,6 +357,12 @@ export default function TestimoniesPage() {
                         <Heart className="w-6 h-6 text-accent-400" />
                       </div>
                       <p className="text-slate-400 text-sm">No testimonies found</p>
+                      <button
+                        onClick={() => setSelected('new')}
+                        className="btn-primary text-xs"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Add the first one
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -372,12 +431,12 @@ export default function TestimoniesPage() {
         </div>
       )}
 
-      {/* Editable modal */}
-      {selected && (
+      {/* Modal — create or edit */}
+      {selected !== null && (
         <TestimonyModal
-          testimony={selected}
+          testimony={selected === 'new' ? null : selected}
           onClose={() => setSelected(null)}
-          onSave={handleSaved}
+          onSaved={handleSaved}
         />
       )}
     </div>

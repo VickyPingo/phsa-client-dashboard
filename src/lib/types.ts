@@ -20,6 +20,8 @@ export interface Client {
   testimony_potential: string | null;
   testimony_text: string | null;
   notes: string | null;
+  maris_note: string | null;
+  maris_note_colour: string | null;
   created_at: string;
   updated_at: string;
 }

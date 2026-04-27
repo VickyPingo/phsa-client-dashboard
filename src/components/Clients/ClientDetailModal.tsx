@@ -3,8 +3,8 @@ import { Client, ClientInsert } from '../../lib/types';
 import { formatDate } from '../../lib/utils';
 import Modal from '../ui/Modal';
 import ClientForm from './ClientForm';
-import Badge, { sexBadge, decisionBadge, testimonyBadge } from '../ui/Badge';
-import { CreditCard as Edit2, Trash2, Phone, MapPin, Calendar, User, Heart } from 'lucide-react';
+import Badge, { sexBadge, decisionBadge } from '../ui/Badge';
+import { CreditCard as Edit2, Trash2, Heart } from 'lucide-react';
 
 interface Props {
   client: Client | null;
@@ -68,7 +68,6 @@ export default function ClientDetailModal({ client, onClose, onUpdate, onDelete 
 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 p-4 bg-slate-50 rounded-xl">
           <Detail label="First Contact" value={formatDate(client.first_contact_date)} />
-          <Detail label="Follow Up" value={formatDate(client.follow_up_date)} />
           <Detail label="Closed" value={formatDate(client.closed_date)} />
           <Detail label="Age" value={client.age} />
           <Detail label="Phone" value={client.phone_number} />
@@ -88,6 +87,18 @@ export default function ClientDetailModal({ client, onClose, onUpdate, onDelete 
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Notes</p>
             <p className="text-sm text-slate-600 bg-slate-50 rounded-xl p-3 leading-relaxed whitespace-pre-wrap">
               {client.notes}
+            </p>
+          </div>
+        )}
+
+        {client.maris_note && (
+          <div>
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Mari's Notes</p>
+            <p
+              className="text-sm text-slate-700 rounded-xl p-3 leading-relaxed whitespace-pre-wrap"
+              style={{ backgroundColor: client.maris_note_colour ?? '#fef9c3' }}
+            >
+              {client.maris_note}
             </p>
           </div>
         )}

@@ -30,6 +30,8 @@ const empty: ClientInsert = {
   testimony_potential: 'No',
   testimony_text: null,
   notes: null,
+  maris_note: null,
+  maris_note_colour: null,
 };
 
 export default function ClientForm({ initial, onSubmit, onCancel, submitLabel = 'Save Client' }: Props) {
@@ -119,9 +121,6 @@ export default function ClientForm({ initial, onSubmit, onCancel, submitLabel = 
         </Field>
         <Field label="Referral Centre 2">
           <input className="input" value={form.referral_2 ?? ''} onChange={e => set('referral_2', e.target.value)} placeholder="Centre name" />
-        </Field>
-        <Field label="Follow Up Date">
-          <input type="date" className="input" value={form.follow_up_date ?? ''} onChange={e => set('follow_up_date', e.target.value)} />
         </Field>
         <Field label="Made Contact with PC?">
           <select className="select" value={form.made_contact_with_pc ?? ''} onChange={e => set('made_contact_with_pc', e.target.value)}>

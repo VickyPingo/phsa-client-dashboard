@@ -10,7 +10,6 @@ import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Client } from '../../lib/types';
 import { formatDate } from '../../lib/utils';
-import { sexBadge, decisionBadge } from '../ui/Badge';
 import { ChevronUp, ChevronDown, ChevronsUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface Props {
@@ -50,7 +49,6 @@ function MarisNoteCell({
   const [pos, setPos] = useState({ top: 0, left: 0 });
   const triggerRef = useRef<HTMLDivElement>(null);
 
-  // Sync with prop changes (when rows refresh)
   useEffect(() => {
     setNote(client.maris_note ?? '');
     setColour(client.maris_note_colour ?? '#fef9c3');
@@ -60,7 +58,6 @@ function MarisNoteCell({
     e.stopPropagation();
     const rect = triggerRef.current?.getBoundingClientRect();
     if (rect) {
-      // Ensure popover doesn't go off-screen right
       const left = Math.min(rect.left, window.innerWidth - 272);
       setPos({ top: rect.bottom + 4, left });
     }
@@ -84,13 +81,11 @@ function MarisNoteCell({
     }
   };
 
-  // Close on outside click
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
       const target = e.target as Node;
       if (triggerRef.current && !triggerRef.current.contains(target)) {
-        // Check if click is inside the portal popover
         const popover = document.getElementById('maris-note-popover');
         if (popover && popover.contains(target)) return;
         handleClose();
@@ -109,8 +104,6 @@ function MarisNoteCell({
           onClick={e => e.stopPropagation()}
         >
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Mari's Note</p>
-
-          {/* Colour swatches */}
           <div className="flex gap-1.5 flex-wrap">
             {NOTE_COLOURS.map(c => (
               <button
@@ -124,8 +117,6 @@ function MarisNoteCell({
               />
             ))}
           </div>
-
-          {/* Note textarea */}
           <textarea
             className="w-full text-xs border border-slate-200 rounded-lg p-2 resize-none focus:outline-none focus:ring-2 focus:ring-primary-400 transition-colors"
             rows={5}
@@ -135,8 +126,6 @@ function MarisNoteCell({
             autoFocus
             style={{ backgroundColor: colour }}
           />
-
-          {/* Actions */}
           <div className="flex gap-2 justify-end">
             <button
               onClick={e => { e.stopPropagation(); handleClose(); }}
@@ -203,49 +192,34 @@ export default function ClientsTable({
   const columns = [
     col.accessor('first_contact_date', {
       header: 'Date',
-      cell: i => <span className="text-slate-500 text-xs">{formatDate(i.getValue())}</span>,
+      cell: i => <span className="text-slate-500 text-xs whitespace-nowrap">{formatDate(i.getValue())}</span>,
     }),
     col.accessor('client_name', {
       header: 'Client',
       cell: i => <span className="font-medium text-slate-800">{i.getValue()}</span>,
     }),
-    col.accessor('volunteer', {
-      header: 'Volunteer',
-      cell: i => <span className="text-slate-600 text-xs">{i.getValue() ?? '—'}</span>,
-    }),
-    col.accessor('sex', {
-      header: 'Sex',
-      cell: i => sexBadge(i.getValue()),
-    }),
     col.accessor('age', {
       header: 'Age',
       cell: i => <span className="text-slate-600 text-xs">{i.getValue() ?? '—'}</span>,
     }),
-    col.accessor('province', {
-      header: 'Province',
+    col.accessor('reason_for_contact', {
+      header: 'Reason for Contact',
+      cell: i => {
+        const v = i.getValue();
+        return <span className="text-slate-600 text-xs line-clamp-2" title={v ?? ''}>{v ?? '—'}</span>;
+      },
+    }),
+    col.accessor('referral_1', {
+      header: 'Referral 1',
       cell: i => <span className="text-slate-600 text-xs">{i.getValue() ?? '—'}</span>,
     }),
-    col.accessor('reason_for_contact', {
-      header: 'Reason',
+    col.accessor('conclusion', {
+      header: 'Conclusion',
       cell: i => {
         const v = i.getValue();
         return <span className="text-slate-600 text-xs line-clamp-1" title={v ?? ''}>{v ?? '—'}</span>;
       },
     }),
-    col.accessor('decision', {
-      header: 'Decision',
-      cell: i => decisionBadge(i.getValue()),
-    }),
-    col.accessor('testimony_potential', {
-      header: 'Testimony',
-      cell: i =>
-        i.getValue() === 'Yes' ? (
-          <span className="text-emerald-600 text-xs font-medium">Yes</span>
-        ) : (
-          <span className="text-slate-300 text-xs">No</span>
-        ),
-    }),
-    // ── Mari's Notes column ──────────────────────────────────────────────────
     col.display({
       id: 'maris_note',
       header: "Mari's Notes",

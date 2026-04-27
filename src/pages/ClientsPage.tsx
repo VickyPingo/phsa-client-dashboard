@@ -35,7 +35,6 @@ export default function ClientsPage({ onRefresh, onAddNew, initialClientId, onIn
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  // Debounce search so we don't fire on every keystroke
   const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
@@ -45,7 +44,6 @@ export default function ClientsPage({ onRefresh, onAddNew, initialClientId, onIn
     return () => { if (searchDebounce.current) clearTimeout(searchDebounce.current); };
   }, [filters.search]);
 
-  // Reset to page 0 when filters change
   useEffect(() => { setPage(0); }, [debouncedSearch, filters.volunteer, filters.province, filters.reason, filters.sex, filters.conclusion, filters.dateFrom, filters.dateTo]);
 
   const fetchRows = useCallback(async () => {
@@ -93,7 +91,6 @@ export default function ClientsPage({ onRefresh, onAddNew, initialClientId, onIn
       .update({ ...data, updated_at: new Date().toISOString() })
       .eq('id', id);
     if (error) throw new Error(error.message);
-    // Refresh the selected client to reflect changes in the modal
     const updated = rows.find(r => r.id === id);
     if (updated) setSelectedClient({ ...updated, ...data } as Client);
     await fetchRows();
@@ -106,6 +103,21 @@ export default function ClientsPage({ onRefresh, onAddNew, initialClientId, onIn
     if (error) throw new Error(error.message);
     await fetchRows();
     onRefresh();
+  };
+
+  // ── Mari's Notes handler ─────────────────────────────────────────────────
+  const handleNoteUpdate = async (id: string, note: string | null, colour: string) => {
+    const { error } = await supabase
+      .from('phsa_clients')
+      .update({ maris_note: note, maris_note_colour: colour, updated_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) throw new Error(error.message);
+    // Optimistically update local state — no full refetch needed
+    setRows(prev =>
+      prev.map(r =>
+        r.id === id ? { ...r, maris_note: note, maris_note_colour: colour } : r
+      )
+    );
   };
 
   const pageCount = Math.ceil(totalCount / PAGE_SIZE);
@@ -166,6 +178,7 @@ export default function ClientsPage({ onRefresh, onAddNew, initialClientId, onIn
             pageCount={pageCount}
             onPageChange={setPage}
             onRowClick={setSelectedClient}
+            onNoteUpdate={handleNoteUpdate}
           />
         </div>
       </div>

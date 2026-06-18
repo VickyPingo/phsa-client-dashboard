@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, UserPlus, Heart, FileText, Settings, X, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, UserPlus, Heart, FileText, X, LogOut } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { Page } from '../../lib/types';
 
@@ -10,12 +10,11 @@ interface SidebarProps {
 }
 
 const navItems: { page: Page; label: string; icon: React.ElementType }[] = [
-  { page: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { page: 'clients', label: 'Clients', icon: Users },
-  { page: 'add-client', label: 'Import Client', icon: UserPlus },
-  { page: 'testimonies', label: 'Testimonies', icon: Heart },
-  { page: 'reports', label: 'Reports', icon: FileText },
-  { page: 'settings', label: 'Settings', icon: Settings },
+  { page: 'dashboard',  label: 'Dashboard',     icon: LayoutDashboard },
+  { page: 'clients',    label: 'Clients',        icon: Users },
+  { page: 'add-client', label: 'Import Client',  icon: UserPlus },
+  { page: 'testimonies',label: 'Testimonies',    icon: Heart },
+  { page: 'reports',    label: 'Reports',        icon: FileText },
 ];
 
 export default function Sidebar({ currentPage, onNavigate, mobileOpen, onMobileToggle }: SidebarProps) {
@@ -47,7 +46,7 @@ export default function Sidebar({ currentPage, onNavigate, mobileOpen, onMobileT
                   : 'text-white/70 hover:bg-white/10 hover:text-white'
               }`}
             >
-              <Icon className="w-4.5 h-4.5 flex-shrink-0" style={{ width: 18, height: 18 }} />
+              <Icon className="flex-shrink-0" style={{ width: 18, height: 18 }} />
               {label}
             </button>
           );
@@ -55,9 +54,7 @@ export default function Sidebar({ currentPage, onNavigate, mobileOpen, onMobileT
       </nav>
 
       <div className="px-3 py-4 border-t border-white/10 space-y-3">
-        <p className="text-white/40 text-xs text-center">
-          Pregnancy Help South Africa
-        </p>
+        <p className="text-white/40 text-xs text-center">Pregnancy Help South Africa</p>
         <button
           onClick={() => supabase.auth.signOut()}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white transition-all"
@@ -74,7 +71,6 @@ export default function Sidebar({ currentPage, onNavigate, mobileOpen, onMobileT
       <aside className="hidden lg:flex lg:flex-col w-56 min-h-screen bg-gradient-to-b from-primary-700 to-accent-700 fixed left-0 top-0 z-30">
         {content}
       </aside>
-
       {mobileOpen && (
         <div className="lg:hidden fixed inset-0 z-40 flex">
           <div className="fixed inset-0 bg-black/40" onClick={onMobileToggle} />

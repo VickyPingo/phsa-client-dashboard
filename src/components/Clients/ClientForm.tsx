@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ClientInsert, PROVINCES, REASONS_FOR_CONTACT, CONCLUSIONS, DECISIONS, MADE_CONTACT_OPTIONS } from '../../lib/types';
+import { useReferralCentres } from '../../hooks/useReferralCentres';
 
 interface Props {
   initial?: Partial<ClientInsert>;
@@ -36,6 +37,7 @@ const empty: ClientInsert = {
 export default function ClientForm({ initial, onSubmit, onCancel, submitLabel = 'Save Client' }: Props) {
   const [form, setForm] = useState<ClientInsert>({ ...empty, ...initial });
   const [saving, setSaving] = useState(false);
+  const { centres, provinceByName } = useReferralCentres();
 
   useEffect(() => {
     if (initial) setForm({ ...empty, ...initial });
@@ -43,6 +45,19 @@ export default function ClientForm({ initial, onSubmit, onCancel, submitLabel = 
 
   const set = (key: keyof ClientInsert, value: string | null) => {
     setForm(f => ({ ...f, [key]: value || null }));
+  };
+
+  // When a referral centre is entered, try to auto-fill province
+  const handleReferralChange = (key: 'referral_1' | 'referral_2', value: string) => {
+    setForm(f => {
+      const updated = { ...f, [key]: value || null };
+      // Only auto-fill province if it's currently empty
+      if (!f.province) {
+        const matched = provinceByName[value.toLowerCase()];
+        if (matched) updated.province = matched;
+      }
+      return updated;
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -62,6 +77,8 @@ export default function ClientForm({ initial, onSubmit, onCancel, submitLabel = 
       {children}
     </div>
   );
+
+  const centreNames = centres.map(c => c.name);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -107,13 +124,34 @@ export default function ClientForm({ initial, onSubmit, onCancel, submitLabel = 
         </select>
       </Field>
 
+      {/* Referral centres with autocomplete + province auto-fill */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Field label="Referral Centre 1">
-          <input className="input" value={form.referral_1 ?? ''} onChange={e => set('referral_1', e.target.value)} placeholder="Centre name" />
+          <input
+            className="input"
+            list="referral-centres-list"
+            value={form.referral_1 ?? ''}
+            onChange={e => handleReferralChange('referral_1', e.target.value)}
+            placeholder="Start typing centre name..."
+          />
         </Field>
         <Field label="Referral Centre 2">
-          <input className="input" value={form.referral_2 ?? ''} onChange={e => set('referral_2', e.target.value)} placeholder="Centre name" />
+          <input
+            className="input"
+            list="referral-centres-list"
+            value={form.referral_2 ?? ''}
+            onChange={e => handleReferralChange('referral_2', e.target.value)}
+            placeholder="Start typing centre name..."
+          />
         </Field>
+
+        {/* Shared datalist for both referral fields */}
+        <datalist id="referral-centres-list">
+          {centreNames.map(name => (
+            <option key={name} value={name} />
+          ))}
+        </datalist>
+
         <Field label="Made Contact with PC?">
           <select className="select" value={form.made_contact_with_pc ?? ''} onChange={e => set('made_contact_with_pc', e.target.value)}>
             <option value="">Select</option>

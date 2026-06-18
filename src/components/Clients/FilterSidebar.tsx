@@ -1,12 +1,10 @@
 import { X } from 'lucide-react';
 import { PROVINCES, REASONS_FOR_CONTACT, CONCLUSIONS } from '../../lib/types';
-import { useVolunteers } from '../../hooks/useVolunteers';
 
 export interface Filters {
   search: string;
   dateFrom: string;
   dateTo: string;
-  volunteer: string;
   province: string;
   reason: string;
   sex: string;
@@ -22,7 +20,6 @@ interface Props {
 export default function FilterSidebar({ filters, onChange, onClear }: Props) {
   const set = (key: keyof Filters, val: string) =>
     onChange({ ...filters, [key]: val });
-  const { activeNames: volunteerNames } = useVolunteers();
 
   return (
     <aside className="w-full lg:w-56 flex-shrink-0 space-y-4">
@@ -41,14 +38,6 @@ export default function FilterSidebar({ filters, onChange, onClear }: Props) {
         <div>
           <label className="label">Date To</label>
           <input type="date" className="input" value={filters.dateTo} onChange={e => set('dateTo', e.target.value)} />
-        </div>
-
-        <div>
-          <label className="label">Volunteer</label>
-          <select className="select" value={filters.volunteer} onChange={e => set('volunteer', e.target.value)}>
-            <option value="">All</option>
-            {volunteerNames.map(v => <option key={v} value={v}>{v}</option>)}
-          </select>
         </div>
 
         <div>

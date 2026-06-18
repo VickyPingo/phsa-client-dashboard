@@ -27,13 +27,14 @@ function mapExtracted(data: Record<string, any>, defaultHowFoundUs?: string): Pa
     client_name:        data.clientName        || '',
     first_contact_date: data.firstContactDate  || today,
     first_contact_time: data.firstContactTime  || null,
-    volunteer:          data.volunteer         || null,
     age:                data.age ? String(data.age) : null,
     sex:                data.sex               || null,
     reason_for_contact: data.reasonForContact  || null,
     how_found_us:       data.howFoundUs        || defaultHowFoundUs || null,
     phone_number:       data.phoneNumber       || null,
     province:           data.province          || null,
+    referral_1:         data.referral1         || null,
+    referral_2:         data.referral2         || null,
     notes:              data.notes             || null,
   };
 }
@@ -48,9 +49,6 @@ export default function AddClientPage({ onSuccess, onViewClient }: Props) {
   const [saved, setSaved] = useState(false);
   const [duplicate, setDuplicate] = useState<DuplicateWarning | null>(null);
 
-  const chatText = mode === 'facebook' ? fbChat : waChat;
-  const setChatText = mode === 'facebook' ? setFbChat : setWaChat;
-
   const handleExtract = async (source: 'facebook' | 'whatsapp') => {
     const text = source === 'facebook' ? fbChat : waChat;
     if (!text.trim()) return;
@@ -61,7 +59,6 @@ export default function AddClientPage({ onSuccess, onViewClient }: Props) {
       const { data, error } = await supabase.functions.invoke('extract-client', {
         body: { chat: text, source },
       });
-      console.log('Extracted data:', data);
       if (error) throw new Error(error.message || 'Extraction failed. Please try again.');
       if (data?.error) throw new Error(data.error);
       const defaultHowFoundUs = source === 'whatsapp' ? 'WhatsApp' : undefined;
@@ -117,7 +114,7 @@ export default function AddClientPage({ onSuccess, onViewClient }: Props) {
   const tabs: { id: Mode; icon: React.ReactNode; label: string }[] = [
     { id: 'facebook', icon: <MessageSquare className="w-4 h-4" />, label: 'Facebook Messenger' },
     { id: 'whatsapp', icon: <span className="text-sm leading-none">💬</span>, label: 'WhatsApp' },
-    { id: 'manual',   icon: <FormInput className="w-4 h-4" />,    label: 'Manual Entry' },
+    { id: 'manual',   icon: <FormInput className="w-4 h-4" />, label: 'Manual Entry' },
   ];
 
   const activeClass = 'bg-gradient-to-r from-primary-600 to-accent-600 text-white shadow-sm';
@@ -131,7 +128,7 @@ export default function AddClientPage({ onSuccess, onViewClient }: Props) {
       ? 'Paste a Facebook Messenger conversation and Claude will extract client details automatically.'
       : 'Paste a WhatsApp chat export and Claude will extract client details automatically.';
     const placeholder = source === 'facebook'
-      ? '[Volunteer]: Hi, thank you for reaching out to PHSA. How can we help you today?\n[Client]: I found out I\'m pregnant and I\'m really scared...\n[Volunteer]: I\'m so sorry to hear that. Can you tell me a bit more?\n...'
+      ? '[Volunteer]: Hi, thank you for reaching out to PHSA...\n[Client]: I found out I\'m pregnant and I\'m really scared...'
       : '7 Apr 2026, 19:17 - Khanya Cekiso: Hi I need help\n7 Apr 2026, 19:18 - Vicky: Hello Khanya...';
 
     return (
@@ -146,41 +143,22 @@ export default function AddClientPage({ onSuccess, onViewClient }: Props) {
               <p className="text-slate-400 text-xs mt-0.5">{desc}</p>
             </div>
           </div>
-
           <div>
             <label className="label">{label}</label>
-            <textarea
-              className="input font-mono text-xs"
-              rows={10}
-              value={text}
-              onChange={e => setText(e.target.value)}
-              placeholder={placeholder}
-            />
+            <textarea className="input font-mono text-xs" rows={10} value={text} onChange={e => setText(e.target.value)} placeholder={placeholder} />
           </div>
-
           {extractError && (
             <div className="mt-3 flex items-center gap-2 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 text-sm text-rose-700">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
               {extractError}
             </div>
           )}
-
           <div className="mt-4">
-            <button
-              onClick={() => handleExtract(source)}
-              disabled={!text.trim() || extracting}
-              className="btn-primary"
-            >
+            <button onClick={() => handleExtract(source)} disabled={!text.trim() || extracting} className="btn-primary">
               {extracting ? (
-                <>
-                  <Spinner size="sm" />
-                  Extracting with Claude...
-                </>
+                <><Spinner size="sm" /> Extracting with Claude...</>
               ) : (
-                <>
-                  <Sparkles className="w-4 h-4" />
-                  Extract Client Info
-                </>
+                <><Sparkles className="w-4 h-4" /> Extract Client Info</>
               )}
             </button>
           </div>
@@ -214,9 +192,7 @@ export default function AddClientPage({ onSuccess, onViewClient }: Props) {
           <button
             key={tab.id}
             onClick={() => { setMode(tab.id); setExtracted(null); setExtractError(null); }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              mode === tab.id ? activeClass : inactiveClass
-            }`}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${mode === tab.id ? activeClass : inactiveClass}`}
           >
             {tab.icon}
             {tab.label}
@@ -230,11 +206,7 @@ export default function AddClientPage({ onSuccess, onViewClient }: Props) {
       {mode === 'manual' && (
         <div className="card p-5">
           <h3 className="font-semibold text-slate-700 text-sm mb-4">New Client Details</h3>
-          <ClientForm
-            onSubmit={handleSave}
-            onCancel={() => {}}
-            submitLabel="Save Client"
-          />
+          <ClientForm onSubmit={handleSave} onCancel={() => {}} submitLabel="Save Client" />
         </div>
       )}
 
@@ -246,23 +218,10 @@ export default function AddClientPage({ onSuccess, onViewClient }: Props) {
               a first contact date of <span className="font-semibold text-slate-800">{formatDate(duplicate.first_contact_date)}</span> already exists.
             </p>
             <div className="flex flex-col sm:flex-row gap-2">
-              <button
-                className="btn-primary flex-1"
-                onClick={() => {
-                  setDuplicate(null);
-                  if (onViewClient) onViewClient(duplicate.id);
-                }}
-              >
+              <button className="btn-primary flex-1" onClick={() => { setDuplicate(null); if (onViewClient) onViewClient(duplicate.id); }}>
                 View Existing Record
               </button>
-              <button
-                className="btn-secondary flex-1"
-                onClick={async () => {
-                  const data = duplicate.pendingData;
-                  setDuplicate(null);
-                  await doSave(data);
-                }}
-              >
+              <button className="btn-secondary flex-1" onClick={async () => { const data = duplicate.pendingData; setDuplicate(null); await doSave(data); }}>
                 Save Anyway
               </button>
             </div>

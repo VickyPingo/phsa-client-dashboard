@@ -8,7 +8,6 @@ import ClientsPage from './pages/ClientsPage';
 import AddClientPage from './pages/AddClientPage';
 import TestimoniesPage from './pages/TestimoniesPage';
 import ReportsPage from './pages/ReportsPage';
-import SettingsPage from './pages/SettingsPage';
 import LoginPage from './pages/LoginPage';
 import Spinner from './components/ui/Spinner';
 
@@ -23,11 +22,9 @@ export default function App() {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
     });
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
     });
-
     return () => subscription.unsubscribe();
   }, []);
 
@@ -51,7 +48,6 @@ export default function App() {
     setPage('clients');
   };
 
-  // Still resolving auth state
   if (session === undefined) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -92,7 +88,6 @@ export default function App() {
           )}
           {page === 'testimonies' && <TestimoniesPage />}
           {page === 'reports' && <ReportsPage clients={clients} />}
-          {page === 'settings' && <SettingsPage />}
         </>
       )}
     </Layout>

@@ -17,7 +17,6 @@ export interface ReportStats {
   byProvince: ChartRow[];
   byReason: ChartRow[];
   byHowFound: ChartRow[];
-  byVolunteer: ChartRow[];
   byDecision: ChartRow[];
   byConclusion: ChartRow[];
   timeBands: ChartRow[];
@@ -26,7 +25,7 @@ export interface ReportStats {
 const EMPTY_STATS: ReportStats = {
   kpis: { total: 0, female: 0, male: 0, referrals: 0, testimony: 0, avg_age: null },
   byProvince: [], byReason: [], byHowFound: [],
-  byVolunteer: [], byDecision: [], byConclusion: [], timeBands: [],
+  byDecision: [], byConclusion: [], timeBands: [],
 };
 
 type RpcRow = { label: string; count: number };
@@ -58,7 +57,6 @@ export function useReportData(dateFrom: string, dateTo: string) {
         { data: avgAgeData },
         { data: reasonData },
         { data: howFoundData },
-        { data: volunteerData },
         { data: provinceData },
         { data: decisionData },
         { data: conclusionData },
@@ -67,14 +65,11 @@ export function useReportData(dateFrom: string, dateTo: string) {
         buildCount(supabase.from('phsa_clients')),
         buildCount(supabase.from('phsa_clients')).eq('sex', 'F'),
         buildCount(supabase.from('phsa_clients')).eq('sex', 'M'),
-        buildCount(supabase.from('phsa_clients'))
-          .or('referral_1.neq.null,referral_2.neq.null'),
-        buildCount(supabase.from('phsa_clients'))
-          .in('testimony_potential', ['Yes', 'Asked', 'Received', 'Provided']),
+        buildCount(supabase.from('phsa_clients')).or('referral_1.neq.null,referral_2.neq.null'),
+        buildCount(supabase.from('phsa_clients')).in('testimony_potential', ['Yes', 'Asked', 'Received', 'Provided']),
         supabase.rpc('get_avg_age',           { date_from: dateFrom || null, date_to: dateTo || null }),
         supabase.rpc('get_reason_counts',     { date_from: dateFrom || null, date_to: dateTo || null }),
         supabase.rpc('get_how_found_counts',  { date_from: dateFrom || null, date_to: dateTo || null }),
-        supabase.rpc('get_volunteer_counts',  { date_from: dateFrom || null, date_to: dateTo || null }),
         supabase.rpc('get_province_counts',   { date_from: dateFrom || null, date_to: dateTo || null }),
         supabase.rpc('get_decision_counts',   { date_from: dateFrom || null, date_to: dateTo || null }),
         supabase.rpc('get_conclusion_counts', { date_from: dateFrom || null, date_to: dateTo || null }),
@@ -92,7 +87,6 @@ export function useReportData(dateFrom: string, dateTo: string) {
         },
         byReason:    normalize(reasonData as RpcRow[]),
         byHowFound:  normalize(howFoundData as RpcRow[]),
-        byVolunteer: normalize(volunteerData as RpcRow[]),
         byProvince:  normalize(provinceData as RpcRow[]),
         byDecision:  normalize(decisionData as RpcRow[]),
         byConclusion:normalize(conclusionData as RpcRow[]),

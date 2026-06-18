@@ -1,140 +1,311 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { useState } from 'react';
+import { supabase } from '../lib/supabase';
+import { ClientInsert } from '../lib/types';
+import ClientForm from '../components/Clients/ClientForm';
+import Spinner from '../components/ui/Spinner';
+import Modal from '../components/ui/Modal';
+import { MessageSquare, FormInput, Sparkles, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
+import { formatDate } from '../lib/utils';
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
-};
+interface Props {
+  onSuccess: () => void;
+  onViewClient?: (id: string) => void;
+}
 
-const PROVINCES = [
-  'Gauteng', 'KZN', 'Free State', 'Limpopo', 'Mpumalanga',
-  'Western Cape', 'Eastern Cape', 'North West', 'Northern Cape',
-];
+interface DuplicateWarning {
+  id: string;
+  client_name: string;
+  first_contact_date: string | null;
+  pendingData: ClientInsert;
+}
 
-const REASONS_FOR_CONTACT = [
-  'Unwanted pregnancy (abortion services)',
-  'Unwanted pregnancy (adoption services)',
-  'Pregnancy support',
-  'Pregnancy test',
-  'Wanting to fall pregnant',
-  'Post abortion counselling',
-  'Failed abortion',
-  'Enquiring about services',
-  'Other',
-];
+type Mode = 'facebook' | 'whatsapp' | 'manual';
 
-const HOW_FOUND_OPTIONS = [
-  'Facebook',
-  'Instagram',
-  'Word of mouth',
-  'Internet search',
-  'Other social media',
-  'Referral',
-  'Other',
-];
+function mapExtracted(data: Record<string, any>, defaultHowFoundUs?: string): Partial<ClientInsert> {
+  const today = new Date().toISOString().split('T')[0];
+  return {
+    client_name:        data.clientName        || '',
+    first_contact_date: data.firstContactDate  || today,
+    first_contact_time: data.firstContactTime  || null,
+    age:                data.age ? String(data.age) : null,
+    sex:                data.sex               || null,
+    reason_for_contact: data.reasonForContact  || null,
+    how_found_us:       data.howFoundUs        || defaultHowFoundUs || null,
+    phone_number:       data.phoneNumber       || null,
+    province:           data.province          || null,
+    referral_1:         data.referral1         || null,
+    referral_2:         data.referral2         || null,
+    notes:              data.notes             || null,
+  };
+}
 
-Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { status: 200, headers: corsHeaders });
-  }
+export default function AddClientPage({ onSuccess, onViewClient }: Props) {
+  const [mode, setMode] = useState<Mode>('facebook');
+  const [fbChat, setFbChat] = useState('');
+  const [waChat, setWaChat] = useState('');
+  const [extracting, setExtracting] = useState(false);
+  const [extractError, setExtractError] = useState<string | null>(null);
+  const [extracted, setExtracted] = useState<Partial<ClientInsert> | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [savedMsg, setSavedMsg] = useState('Client saved successfully!');
+  const [duplicate, setDuplicate] = useState<DuplicateWarning | null>(null);
+  const [updating, setUpdating] = useState(false);
+  const [updateError, setUpdateError] = useState<string | null>(null);
 
-  try {
-    const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
-    if (!apiKey) {
-      return new Response(
-        JSON.stringify({ error: "ANTHROPIC_API_KEY not configured." }),
-        { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const { chat } = await req.json();
-    if (!chat) {
-      return new Response(
-        JSON.stringify({ error: "No chat text provided" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const today = new Date().toISOString().split("T")[0];
-
-    const prompt = `You are a data extraction assistant for Pregnancy Help South Africa (PHSA). Extract client information from this conversation and return ONLY a JSON object with exactly these keys:
-
-- clientName: string or null — the client's full name
-- firstContactDate: ISO date string YYYY-MM-DD or null — date of first contact
-- firstContactTime: string HH:MM (24-hour) or null — time of first message
-- age: string or null — client's age as a number string (e.g. "24") or "Unknown"
-- sex: "F", "M", "Unknown", or null
-- reasonForContact: string or null — must exactly match one of: ${JSON.stringify(REASONS_FOR_CONTACT)}. Null if no exact match.
-- howFoundUs: string or null — must exactly match one of: ${JSON.stringify(HOW_FOUND_OPTIONS)}. Null if no exact match.
-- phoneNumber: string or null — client's phone number
-- province: string or null — must exactly match one of: ${JSON.stringify(PROVINCES)}. Null if no exact match.
-- referral1: string or null — name of first referral centre mentioned, if any
-- referral2: string or null — name of second referral centre mentioned, if any
-- notes: string or null — a brief summary of the conversation and key details
-
-Rules:
-- Return ONLY valid JSON, no markdown, no explanation, no code fences.
-- For dropdown fields (reasonForContact, howFoundUs, province), the value MUST exactly match one of the listed options or be null.
-- For referral centres, extract the actual centre name as mentioned in the conversation — do not leave blank if a centre is mentioned.
-- If a field cannot be determined, use null.
-
-Chat:
-${chat}`;
-
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-opus-4-7",
-        max_tokens: 1024,
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
-
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`Anthropic API error: ${res.status} ${errText}`);
-    }
-
-    const anthropicData = await res.json();
-    const raw = anthropicData.content?.[0]?.text ?? "{}";
-
-    let parsed: Record<string, unknown> = {};
+  const handleExtract = async (source: 'facebook' | 'whatsapp') => {
+    const text = source === 'facebook' ? fbChat : waChat;
+    if (!text.trim()) return;
+    setExtracting(true);
+    setExtractError(null);
+    setExtracted(null);
     try {
-      parsed = JSON.parse(raw.trim());
-    } catch {
-      const match = raw.match(/\{[\s\S]*\}/);
-      if (match) parsed = JSON.parse(match[0]);
+      const { data, error } = await supabase.functions.invoke('extract-client', {
+        body: { chat: text, source },
+      });
+      if (error) throw new Error(error.message || 'Extraction failed. Please try again.');
+      if (data?.error) throw new Error(data.error);
+      const defaultHowFoundUs = source === 'whatsapp' ? 'WhatsApp' : undefined;
+      setExtracted(mapExtracted(data, defaultHowFoundUs));
+    } catch (err: any) {
+      setExtractError(err.message || 'Something went wrong.');
+    } finally {
+      setExtracting(false);
     }
+  };
 
-    const result = {
-      clientName:        (parsed.clientName as string | null) ?? null,
-      firstContactDate:  (parsed.firstContactDate as string | null) ?? today,
-      firstContactTime:  (parsed.firstContactTime as string | null) ?? null,
-      age:               (parsed.age != null ? String(parsed.age) : null),
-      sex:               (parsed.sex as string | null) ?? null,
-      reasonForContact:  (parsed.reasonForContact as string | null) ?? null,
-      howFoundUs:        (parsed.howFoundUs as string | null) ?? null,
-      phoneNumber:       (parsed.phoneNumber as string | null) ?? null,
-      province:          (parsed.province as string | null) ?? null,
-      referral1:         (parsed.referral1 as string | null) ?? null,
-      referral2:         (parsed.referral2 as string | null) ?? null,
-      notes:             (parsed.notes as string | null) ?? null,
-    };
+  const doSave = async (data: ClientInsert) => {
+    const { error } = await supabase.from('phsa_clients').insert(data);
+    if (error) throw error;
+    setSavedMsg('Client saved successfully!');
+    setSaved(true);
+    setTimeout(() => {
+      setSaved(false);
+      setExtracted(null);
+      setFbChat('');
+      setWaChat('');
+      onSuccess();
+    }, 1500);
+  };
 
-    return new Response(
-      JSON.stringify(result),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "Unknown error";
-    return new Response(
-      JSON.stringify({ error: msg }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  // Smart merge: only update fields that have a new non-null value,
+  // preserving existing data for fields left blank in the new form.
+  const doUpdate = async (id: string, newData: ClientInsert) => {
+    setUpdating(true);
+    setUpdateError(null);
+    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    (Object.entries(newData) as [keyof ClientInsert, unknown][]).forEach(([key, value]) => {
+      if (value !== null && value !== '' && value !== undefined) {
+        updates[key] = value;
+      }
+    });
+    const { error } = await supabase
+      .from('phsa_clients')
+      .update(updates)
+      .eq('id', id);
+    setUpdating(false);
+    if (error) {
+      setUpdateError(error.message);
+      return;
+    }
+    setDuplicate(null);
+    setSavedMsg('Existing client updated successfully!');
+    setSaved(true);
+    setTimeout(() => {
+      setSaved(false);
+      setExtracted(null);
+      setFbChat('');
+      setWaChat('');
+      onSuccess();
+    }, 1500);
+  };
+
+  const handleSave = async (data: ClientInsert) => {
+    if (data.client_name && data.first_contact_date) {
+      const { data: existing } = await supabase
+        .from('phsa_clients')
+        .select('id, client_name, first_contact_date')
+        .eq('client_name', data.client_name)
+        .eq('first_contact_date', data.first_contact_date)
+        .limit(1);
+      if (existing && existing.length > 0) {
+        setDuplicate({ ...existing[0], pendingData: data });
+        return;
+      }
+    }
+    await doSave(data);
+  };
+
+  if (saved) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 gap-4">
+        <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center">
+          <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+        </div>
+        <p className="text-slate-700 font-semibold">{savedMsg}</p>
+        <p className="text-slate-400 text-sm">Redirecting to clients list...</p>
+      </div>
     );
   }
-});
+
+  const tabs: { id: Mode; icon: React.ReactNode; label: string }[] = [
+    { id: 'facebook', icon: <MessageSquare className="w-4 h-4" />, label: 'Facebook Messenger' },
+    { id: 'whatsapp', icon: <span className="text-sm leading-none">💬</span>, label: 'WhatsApp' },
+    { id: 'manual',   icon: <FormInput className="w-4 h-4" />, label: 'Manual Entry' },
+  ];
+
+  const activeClass = 'bg-gradient-to-r from-primary-600 to-accent-600 text-white shadow-sm';
+  const inactiveClass = 'text-slate-500 hover:text-slate-700';
+
+  const ChatExtractPanel = ({ source }: { source: 'facebook' | 'whatsapp' }) => {
+    const text    = source === 'facebook' ? fbChat : waChat;
+    const setText = source === 'facebook' ? setFbChat : setWaChat;
+    const label   = source === 'facebook' ? 'Paste Facebook Messenger Chat' : 'Paste WhatsApp chat export here';
+    const desc    = source === 'facebook'
+      ? 'Paste a Facebook Messenger conversation and Claude will extract client details automatically.'
+      : 'Paste a WhatsApp chat export and Claude will extract client details automatically.';
+    const placeholder = source === 'facebook'
+      ? '[Volunteer]: Hi, thank you for reaching out to PHSA...\n[Client]: I found out I\'m pregnant and I\'m really scared...'
+      : '7 Apr 2026, 19:17 - Khanya Cekiso: Hi I need help\n7 Apr 2026, 19:18 - Vicky: Hello Khanya...';
+
+    return (
+      <div className="space-y-5">
+        <div className="card p-5">
+          <div className="flex items-start gap-3 mb-4">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center flex-shrink-0">
+              <Sparkles className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <p className="font-semibold text-slate-700 text-sm">AI Chat Extraction</p>
+              <p className="text-slate-400 text-xs mt-0.5">{desc}</p>
+            </div>
+          </div>
+          <div>
+            <label className="label">{label}</label>
+            <textarea className="input font-mono text-xs" rows={10} value={text} onChange={e => setText(e.target.value)} placeholder={placeholder} />
+          </div>
+          {extractError && (
+            <div className="mt-3 flex items-center gap-2 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 text-sm text-rose-700">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              {extractError}
+            </div>
+          )}
+          <div className="mt-4">
+            <button onClick={() => handleExtract(source)} disabled={!text.trim() || extracting} className="btn-primary">
+              {extracting ? (
+                <><Spinner size="sm" /> Extracting with Claude...</>
+              ) : (
+                <><Sparkles className="w-4 h-4" /> Extract Client Info</>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {extracted && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5 text-sm">
+              <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+              <span>Client information extracted! Review and complete the form below, then save.</span>
+            </div>
+            <div className="card p-5">
+              <h3 className="font-semibold text-slate-700 text-sm mb-4">Review & Complete</h3>
+              <ClientForm
+                initial={extracted}
+                onSubmit={handleSave}
+                onCancel={() => { setExtracted(null); setText(''); }}
+                submitLabel="Save Client"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="max-w-3xl mx-auto space-y-6">
+      <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 shadow-sm w-fit">
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => { setMode(tab.id); setExtracted(null); setExtractError(null); }}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${mode === tab.id ? activeClass : inactiveClass}`}
+          >
+            {tab.icon}
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {mode === 'facebook' && <ChatExtractPanel source="facebook" />}
+      {mode === 'whatsapp' && <ChatExtractPanel source="whatsapp" />}
+      {mode === 'manual' && (
+        <div className="card p-5">
+          <h3 className="font-semibold text-slate-700 text-sm mb-4">New Client Details</h3>
+          <ClientForm onSubmit={handleSave} onCancel={() => {}} submitLabel="Save Client" />
+        </div>
+      )}
+
+      {/* ── Duplicate detection modal ──────────────────────────────────────── */}
+      {duplicate && (
+        <Modal open title="Client Already Exists" onClose={() => setDuplicate(null)} size="sm">
+          <div className="space-y-4">
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+              <p className="text-sm text-amber-800">
+                A record for <span className="font-semibold">{duplicate.client_name}</span> with
+                first contact on <span className="font-semibold">{formatDate(duplicate.first_contact_date)}</span> already exists.
+              </p>
+              <p className="text-xs text-amber-600 mt-1">What would you like to do?</p>
+            </div>
+
+            {updateError && (
+              <div className="bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 text-sm text-rose-700">
+                {updateError}
+              </div>
+            )}
+
+            <div className="flex flex-col gap-2">
+              {/* Option 1 — Update existing (smart merge) */}
+              <button
+                className="btn-primary w-full justify-center gap-2"
+                disabled={updating}
+                onClick={() => doUpdate(duplicate.id, duplicate.pendingData)}
+              >
+                {updating ? (
+                  <><Spinner size="sm" /> Updating...</>
+                ) : (
+                  <><RefreshCw className="w-4 h-4" /> Update Existing Record</>
+                )}
+              </button>
+              <p className="text-xs text-slate-400 text-center -mt-1">
+                Merges new information into the existing record, keeping any data already saved.
+              </p>
+
+              {/* Option 2 — View existing */}
+              <button
+                className="btn-secondary w-full justify-center"
+                onClick={() => {
+                  setDuplicate(null);
+                  if (onViewClient) onViewClient(duplicate.id);
+                }}
+              >
+                View Existing Record
+              </button>
+
+              {/* Option 3 — Save as new */}
+              <button
+                className="text-xs text-slate-400 hover:text-slate-600 py-1 underline underline-offset-2 text-center w-full"
+                onClick={async () => {
+                  const data = duplicate.pendingData;
+                  setDuplicate(null);
+                  await doSave(data);
+                }}
+              >
+                Save as new client anyway
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}

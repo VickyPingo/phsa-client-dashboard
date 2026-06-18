@@ -28,12 +28,6 @@ export interface Client {
 
 export type ClientInsert = Omit<Client, 'id' | 'created_at' | 'updated_at'>;
 
-export const VOLUNTEERS = [
-  'Anri', 'Steph', 'Jane', 'Lynn H', 'Lyn VB',
-  'Rebecca', 'Renette', 'Mandisa', 'Mari', 'Marietjie',
-  'Melanie', 'Anne', 'Joan',
-];
-
 export const PROVINCES = [
   'Gauteng', 'KZN', 'Free State', 'Limpopo', 'Mpumalanga',
   'Western Cape', 'Eastern Cape', 'North West', 'Northern Cape',
@@ -70,7 +64,7 @@ export const CONCLUSIONS = [
   'Miscarriage',
 ];
 
-export const DECISIONS = ['P', 'AB-P', 'AD-P', 'MIS', 'AB-AB', 'Other'];
+export const DECISIONS = ['P', 'AB-P', 'AD-P', 'MIS', 'AB-AB', 'Other', 'Unknown'];
 
 export const MADE_CONTACT_OPTIONS = [
   'Yes', 'No', 'Partially', 'Planning to', 'Not sure',
@@ -99,4 +93,4 @@ export interface Volunteer {
   updated_at: string;
 }
 
-export type Page = 'dashboard' | 'clients' | 'add-client' | 'testimonies' | 'reports' | 'settings';
+export type Page = 'dashboard' | 'clients' | 'add-client' | 'testimonies' | 'reports';

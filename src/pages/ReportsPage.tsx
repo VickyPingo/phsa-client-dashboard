@@ -29,31 +29,15 @@ function sheetFromChartData(data: ChartRow[], categoryLabel: string): XLSX.WorkS
 
 function sheetFromClients(clients: Client[]): XLSX.WorkSheet {
   const headers = [
-    'Date',
-    'Client Name',
-    'Volunteer',
-    'Age',
-    'Sex',
-    'Province',
-    'Reason for Contact',
-    'How Found Us',
-    'Phone Number',
-    'Referral 1',
-    'Referral 2',
-    'Follow Up Date',
-    'Made Contact with PC',
-    'Decision',
-    'Closed Date',
-    'Conclusion',
-    'Testimony Potential',
-    'Notes',
-    "Mari's Note",
+    'Date', 'Client Name', 'Age', 'Sex', 'Province',
+    'Reason for Contact', 'How Found Us', 'Phone Number',
+    'Referral 1', 'Referral 2', 'Made Contact with PC',
+    'Decision', 'Closed Date', 'Conclusion',
+    'Testimony Potential', 'Notes', "Mari's Note",
   ];
-
   const rows = clients.map(c => [
     c.first_contact_date ?? '',
     c.client_name ?? '',
-    c.volunteer ?? '',
     c.age ?? '',
     c.sex ?? '',
     c.province ?? '',
@@ -62,7 +46,6 @@ function sheetFromClients(clients: Client[]): XLSX.WorkSheet {
     c.phone_number ?? '',
     c.referral_1 ?? '',
     c.referral_2 ?? '',
-    c.follow_up_date ?? '',
     c.made_contact_with_pc ?? '',
     c.decision ?? '',
     c.closed_date ?? '',
@@ -71,32 +54,11 @@ function sheetFromClients(clients: Client[]): XLSX.WorkSheet {
     (c.notes ?? '').replace(/\n/g, ' '),
     (c.maris_note ?? '').replace(/\n/g, ' '),
   ]);
-
   const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-
-  // Set column widths
   ws['!cols'] = [
-    { wch: 12 }, // Date
-    { wch: 24 }, // Client Name
-    { wch: 14 }, // Volunteer
-    { wch: 6  }, // Age
-    { wch: 8  }, // Sex
-    { wch: 14 }, // Province
-    { wch: 38 }, // Reason for Contact
-    { wch: 18 }, // How Found Us
-    { wch: 16 }, // Phone Number
-    { wch: 22 }, // Referral 1
-    { wch: 22 }, // Referral 2
-    { wch: 12 }, // Follow Up Date
-    { wch: 20 }, // Made Contact with PC
-    { wch: 10 }, // Decision
-    { wch: 12 }, // Closed Date
-    { wch: 34 }, // Conclusion
-    { wch: 18 }, // Testimony Potential
-    { wch: 40 }, // Notes
-    { wch: 30 }, // Mari's Note
+    {wch:12},{wch:24},{wch:6},{wch:8},{wch:14},{wch:38},{wch:18},{wch:16},
+    {wch:22},{wch:22},{wch:20},{wch:10},{wch:12},{wch:34},{wch:18},{wch:40},{wch:30},
   ];
-
   return ws;
 }
 
@@ -131,11 +93,7 @@ export default function ReportsPage(_: Props) {
   })();
 
   const fetchClientsForPeriod = async (): Promise<Client[]> => {
-    let query = supabase
-      .from('phsa_clients')
-      .select('*')
-      .limit(10000)
-      .order('first_contact_date', { ascending: false });
+    let query = supabase.from('phsa_clients').select('*').limit(10000).order('first_contact_date', { ascending: false });
     if (dateFrom) query = query.gte('first_contact_date', dateFrom);
     if (dateTo)   query = query.lte('first_contact_date', dateTo);
     const { data } = await query;
@@ -159,7 +117,6 @@ export default function ReportsPage(_: Props) {
 
     const wb = XLSX.utils.book_new();
 
-    // Tab 1 — Summary
     const summaryRows = [
       ['Pregnancy Help South Africa — Client Report'],
       [],
@@ -175,30 +132,18 @@ export default function ReportsPage(_: Props) {
       ['Testimonies', kpis.testimony],
     ];
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summaryRows), 'Summary');
-
-    // Tab 2 — Raw clients for the period
     XLSX.utils.book_append_sheet(wb, sheetFromClients(clientData), 'Clients');
-
-    // Tab 3+ — Aggregate charts
     XLSX.utils.book_append_sheet(wb, sheetFromChartData(stats.byReason, 'Reason for Contact'), 'Reason for Contact');
     XLSX.utils.book_append_sheet(wb, sheetFromChartData(stats.byHowFound, 'How Found PHSA'), 'How Found PHSA');
     XLSX.utils.book_append_sheet(wb, sheetFromChartData(stats.byProvince, 'Province'), 'By Province');
-    XLSX.utils.book_append_sheet(
-      wb,
-      sheetFromChartData(stats.byDecision.map((r: ChartRow) => ({ name: decisionLabel(r.name), value: r.value })), 'Decision'),
-      'Decisions',
-    );
+    XLSX.utils.book_append_sheet(wb, sheetFromChartData(stats.byDecision.map((r: ChartRow) => ({ name: decisionLabel(r.name), value: r.value })), 'Decision'), 'Decisions');
     XLSX.utils.book_append_sheet(wb, sheetFromChartData(stats.byConclusion, 'Conclusion'), 'Conclusions');
-    XLSX.utils.book_append_sheet(wb, sheetFromChartData(stats.byVolunteer, 'Volunteer'), 'Cases per Volunteer');
 
     XLSX.writeFile(wb, excelFilename);
   };
 
-  const handlePrint = () => window.print();
-
   return (
     <div className="space-y-6">
-      {/* Print-only header */}
       <div className="hidden print:block mb-6 pb-4 border-b border-slate-300">
         <h1 className="text-xl font-bold text-slate-800">Pregnancy Help South Africa — Client Report</h1>
         <p className="text-sm text-slate-600 mt-1">Date range: {dateLabel}</p>
@@ -225,9 +170,8 @@ export default function ReportsPage(_: Props) {
               {exportingExcel ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4" />}
               {exportingExcel ? 'Fetching...' : 'Export Excel'}
             </button>
-            <button onClick={handlePrint} className="btn-secondary">
-              <Printer className="w-4 h-4" />
-              Export PDF
+            <button onClick={() => window.print()} className="btn-secondary">
+              <Printer className="w-4 h-4" /> Export PDF
             </button>
           </div>
           {(dateFrom || dateTo) && (
@@ -262,46 +206,10 @@ export default function ReportsPage(_: Props) {
       ) : (
         <div className="flex flex-col gap-5">
           <ReportProvinceChart data={stats.byProvince} showTable />
-          <ReportBarChart
-            title="Reason for Contact"
-            data={stats.byReason}
-            color="#0d9488"
-            leftMargin={160}
-            showTable
-            tableLabel="Reason for Contact"
-          />
-          <ReportBarChart
-            title="How Clients Found PHSA"
-            data={stats.byHowFound}
-            color="#22d3ee"
-            leftMargin={160}
-            showTable
-            tableLabel="How Found PHSA"
-          />
-          <ReportBarChart
-            title="Decisions"
-            data={stats.byDecision.map((r: ChartRow) => ({ name: decisionLabel(r.name), value: r.value }))}
-            color="#fb7185"
-            leftMargin={120}
-            showTable
-            tableLabel="Decision"
-          />
-          <ReportBarChart
-            title="Conclusions"
-            data={stats.byConclusion}
-            color="#34d399"
-            leftMargin={120}
-            showTable
-            tableLabel="Conclusion"
-          />
-          <ReportBarChart
-            title="Cases per Volunteer"
-            data={stats.byVolunteer}
-            color="#f59e0b"
-            leftMargin={100}
-            showTable
-            tableLabel="Volunteer"
-          />
+          <ReportBarChart title="Reason for Contact" data={stats.byReason} color="#0d9488" leftMargin={160} showTable tableLabel="Reason for Contact" />
+          <ReportBarChart title="How Clients Found PHSA" data={stats.byHowFound} color="#22d3ee" leftMargin={160} showTable tableLabel="How Found PHSA" />
+          <ReportBarChart title="Decisions" data={stats.byDecision.map((r: ChartRow) => ({ name: decisionLabel(r.name), value: r.value }))} color="#fb7185" leftMargin={120} showTable tableLabel="Decision" />
+          <ReportBarChart title="Conclusions" data={stats.byConclusion} color="#34d399" leftMargin={120} showTable tableLabel="Conclusion" />
           <ContactTimeChart data={stats.timeBands} />
         </div>
       )}

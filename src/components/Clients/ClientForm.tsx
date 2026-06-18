@@ -32,6 +32,7 @@ const empty: ClientInsert = {
   notes: null,
   maris_note: null,
   maris_note_colour: null,
+  status: 'Active',
 };
 
 export default function ClientForm({ initial, onSubmit, onCancel, submitLabel = 'Save Client' }: Props) {
@@ -47,11 +48,20 @@ export default function ClientForm({ initial, onSubmit, onCancel, submitLabel = 
     setForm(f => ({ ...f, [key]: value || null }));
   };
 
-  // When a referral centre is entered, try to auto-fill province
+  // Auto-set status when closed_date changes
+  const handleClosedDateChange = (value: string) => {
+    setForm(f => ({
+      ...f,
+      closed_date: value || null,
+      // Auto-switch status: set Closed when date is filled, Active when cleared
+      status: value ? 'Closed' : 'Active',
+    }));
+  };
+
+  // Referral centre with province auto-fill
   const handleReferralChange = (key: 'referral_1' | 'referral_2', value: string) => {
     setForm(f => {
       const updated = { ...f, [key]: value || null };
-      // Only auto-fill province if it's currently empty
       if (!f.province) {
         const matched = provinceByName[value.toLowerCase()];
         if (matched) updated.province = matched;
@@ -124,7 +134,6 @@ export default function ClientForm({ initial, onSubmit, onCancel, submitLabel = 
         </select>
       </Field>
 
-      {/* Referral centres with autocomplete + province auto-fill */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Field label="Referral Centre 1">
           <input
@@ -144,12 +153,8 @@ export default function ClientForm({ initial, onSubmit, onCancel, submitLabel = 
             placeholder="Start typing centre name..."
           />
         </Field>
-
-        {/* Shared datalist for both referral fields */}
         <datalist id="referral-centres-list">
-          {centreNames.map(name => (
-            <option key={name} value={name} />
-          ))}
+          {centreNames.map(name => <option key={name} value={name} />)}
         </datalist>
 
         <Field label="Made Contact with PC?">
@@ -164,8 +169,21 @@ export default function ClientForm({ initial, onSubmit, onCancel, submitLabel = 
             {DECISIONS.map(d => <option key={d} value={d}>{d}</option>)}
           </select>
         </Field>
+
+        {/* Closed Date + Status side by side */}
         <Field label="Closed Date">
-          <input type="date" className="input" value={form.closed_date ?? ''} onChange={e => set('closed_date', e.target.value)} />
+          <input
+            type="date"
+            className="input"
+            value={form.closed_date ?? ''}
+            onChange={e => handleClosedDateChange(e.target.value)}
+          />
+        </Field>
+        <Field label="Status">
+          <select className="select" value={form.status ?? 'Active'} onChange={e => set('status', e.target.value)}>
+            <option value="Active">Active</option>
+            <option value="Closed">Closed</option>
+          </select>
         </Field>
       </div>
 
@@ -187,24 +205,12 @@ export default function ClientForm({ initial, onSubmit, onCancel, submitLabel = 
 
       {form.testimony_potential === 'Yes' && (
         <Field label="Testimony Text">
-          <textarea
-            className="input"
-            rows={3}
-            value={form.testimony_text ?? ''}
-            onChange={e => set('testimony_text', e.target.value)}
-            placeholder="Client's testimony in their own words..."
-          />
+          <textarea className="input" rows={3} value={form.testimony_text ?? ''} onChange={e => set('testimony_text', e.target.value)} placeholder="Client's testimony in their own words..." />
         </Field>
       )}
 
       <Field label="Notes">
-        <textarea
-          className="input"
-          rows={4}
-          value={form.notes ?? ''}
-          onChange={e => set('notes', e.target.value)}
-          placeholder="Case notes, context, follow-up actions..."
-        />
+        <textarea className="input" rows={4} value={form.notes ?? ''} onChange={e => set('notes', e.target.value)} placeholder="Case notes, context, follow-up actions..." />
       </Field>
 
       <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-100">

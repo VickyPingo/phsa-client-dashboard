@@ -22,6 +22,20 @@ function Detail({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
+function StatusBadge({ status }: { status: string }) {
+  const isClosed = status === 'Closed';
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+      isClosed
+        ? 'bg-slate-100 text-slate-500'
+        : 'bg-emerald-100 text-emerald-700'
+    }`}>
+      <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${isClosed ? 'bg-slate-400' : 'bg-emerald-500'}`} />
+      {status}
+    </span>
+  );
+}
+
 export default function ClientDetailModal({ client, onClose, onUpdate, onDelete }: Props) {
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -55,6 +69,7 @@ export default function ClientDetailModal({ client, onClose, onUpdate, onDelete 
     <Modal open title={client.client_name} onClose={onClose} size="2xl">
       <div className="space-y-6">
         <div className="flex flex-wrap gap-2 items-center">
+          <StatusBadge status={client.status ?? 'Active'} />
           {sexBadge(client.sex)}
           {decisionBadge(client.decision)}
           {client.testimony_potential === 'Yes' && (
@@ -84,19 +99,14 @@ export default function ClientDetailModal({ client, onClose, onUpdate, onDelete 
         {client.notes && (
           <div>
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Notes</p>
-            <p className="text-sm text-slate-600 bg-slate-50 rounded-xl p-3 leading-relaxed whitespace-pre-wrap">
-              {client.notes}
-            </p>
+            <p className="text-sm text-slate-600 bg-slate-50 rounded-xl p-3 leading-relaxed whitespace-pre-wrap">{client.notes}</p>
           </div>
         )}
 
         {client.maris_note && (
           <div>
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Mari's Notes</p>
-            <p
-              className="text-sm text-slate-700 rounded-xl p-3 leading-relaxed whitespace-pre-wrap"
-              style={{ backgroundColor: client.maris_note_colour ?? '#fef9c3' }}
-            >
+            <p className="text-sm text-slate-700 rounded-xl p-3 leading-relaxed whitespace-pre-wrap" style={{ backgroundColor: client.maris_note_colour ?? '#fef9c3' }}>
               {client.maris_note}
             </p>
           </div>

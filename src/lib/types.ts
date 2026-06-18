@@ -22,6 +22,7 @@ export interface Client {
   notes: string | null;
   maris_note: string | null;
   maris_note_colour: string | null;
+  status: string;
   created_at: string;
   updated_at: string;
 }

@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -55,6 +56,23 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Fetch referral centres from DB for province lookup
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const db = createClient(supabaseUrl, supabaseKey);
+    const { data: centreRows } = await db
+      .from("phsa_referral_centres")
+      .select("name, province");
+
+    const centres = (centreRows ?? []) as { name: string; province: string | null }[];
+    const centreNames = centres.map(c => c.name);
+
+    // Build lookup: lowercase name → province
+    const centreLookup: Record<string, string> = {};
+    for (const c of centres) {
+      if (c.province) centreLookup[c.name.toLowerCase()] = c.province;
+    }
+
     const today = new Date().toISOString().split("T")[0];
 
     const prompt = `You are a data extraction assistant for Pregnancy Help South Africa (PHSA). Extract client information from this conversation and return ONLY a JSON object with exactly these keys:
@@ -67,15 +85,15 @@ Deno.serve(async (req: Request) => {
 - reasonForContact: string or null — must exactly match one of: ${JSON.stringify(REASONS_FOR_CONTACT)}. Null if no exact match.
 - howFoundUs: string or null — must exactly match one of: ${JSON.stringify(HOW_FOUND_OPTIONS)}. Null if no exact match.
 - phoneNumber: string or null — client's phone number
-- province: string or null — must exactly match one of: ${JSON.stringify(PROVINCES)}. Null if no exact match.
-- referral1: string or null — name of first referral centre mentioned, if any
-- referral2: string or null — name of second referral centre mentioned, if any
-- notes: string or null — a brief summary of the conversation and key details
+- province: string or null — must exactly match one of: ${JSON.stringify(PROVINCES)}. Null if cannot be determined.
+- referral1: string or null — name of the first pregnancy help centre or referral mentioned. Known centres include: ${JSON.stringify(centreNames.slice(0, 40))}. Match as closely as possible to a known centre name, otherwise use the exact name mentioned.
+- referral2: string or null — name of a second centre if mentioned, otherwise null.
+- notes: string or null — a brief summary of the conversation and key details.
 
 Rules:
 - Return ONLY valid JSON, no markdown, no explanation, no code fences.
-- For dropdown fields (reasonForContact, howFoundUs, province), the value MUST exactly match one of the listed options or be null.
-- For referral centres, extract the actual centre name as mentioned in the conversation — do not leave blank if a centre is mentioned.
+- For referral centres, prioritise matching to a known centre name from the list above.
+- If province is not explicitly mentioned, leave it null (it will be inferred from the referral centre automatically).
 - If a field cannot be determined, use null.
 
 Chat:
@@ -111,6 +129,18 @@ ${chat}`;
       if (match) parsed = JSON.parse(match[0]);
     }
 
+    const referral1 = (parsed.referral1 as string | null) ?? null;
+    const referral2 = (parsed.referral2 as string | null) ?? null;
+
+    // Auto-fill province from referral centre if AI didn't find it
+    let province = (parsed.province as string | null) ?? null;
+    if (!province && referral1) {
+      province = centreLookup[referral1.toLowerCase()] ?? null;
+    }
+    if (!province && referral2) {
+      province = centreLookup[referral2.toLowerCase()] ?? null;
+    }
+
     const result = {
       clientName:        (parsed.clientName as string | null) ?? null,
       firstContactDate:  (parsed.firstContactDate as string | null) ?? today,
@@ -120,9 +150,9 @@ ${chat}`;
       reasonForContact:  (parsed.reasonForContact as string | null) ?? null,
       howFoundUs:        (parsed.howFoundUs as string | null) ?? null,
       phoneNumber:       (parsed.phoneNumber as string | null) ?? null,
-      province:          (parsed.province as string | null) ?? null,
-      referral1:         (parsed.referral1 as string | null) ?? null,
-      referral2:         (parsed.referral2 as string | null) ?? null,
+      province,
+      referral1,
+      referral2,
       notes:             (parsed.notes as string | null) ?? null,
     };
 

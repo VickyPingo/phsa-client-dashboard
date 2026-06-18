@@ -1,5 +1,4 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -56,37 +55,28 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Fetch active volunteers from DB so the list stays in sync
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const db = createClient(supabaseUrl, supabaseKey);
-    const { data: volunteerRows } = await db
-      .from("phsa_volunteers")
-      .select("name")
-      .eq("is_active", true)
-      .order("name", { ascending: true });
-    const VOLUNTEERS = (volunteerRows ?? []).map((r: { name: string }) => r.name);
-
     const today = new Date().toISOString().split("T")[0];
 
-    const prompt = `You are a data extraction assistant for Pregnancy Help South Africa (PHSA). Extract client information from this Facebook Messenger conversation and return ONLY a JSON object with exactly these keys:
+    const prompt = `You are a data extraction assistant for Pregnancy Help South Africa (PHSA). Extract client information from this conversation and return ONLY a JSON object with exactly these keys:
 
 - clientName: string or null — the client's full name
-- firstContactDate: ISO date string YYYY-MM-DD or null — date of first contact (look for date stamps in the chat)
-- firstContactTime: string HH:MM (24-hour) or null — time of first message in the chat (e.g. "09:34"). Look for timestamps on messages.
-- volunteer: string or null — the PHSA volunteer's name. Must exactly match one of: ${JSON.stringify(VOLUNTEERS)}. Null if not found or no match.
+- firstContactDate: ISO date string YYYY-MM-DD or null — date of first contact
+- firstContactTime: string HH:MM (24-hour) or null — time of first message
 - age: string or null — client's age as a number string (e.g. "24") or "Unknown"
-- sex: "F", "M", "Unknown", or null — F for female, M for male
+- sex: "F", "M", "Unknown", or null
 - reasonForContact: string or null — must exactly match one of: ${JSON.stringify(REASONS_FOR_CONTACT)}. Null if no exact match.
 - howFoundUs: string or null — must exactly match one of: ${JSON.stringify(HOW_FOUND_OPTIONS)}. Null if no exact match.
 - phoneNumber: string or null — client's phone number
 - province: string or null — must exactly match one of: ${JSON.stringify(PROVINCES)}. Null if no exact match.
+- referral1: string or null — name of first referral centre mentioned, if any
+- referral2: string or null — name of second referral centre mentioned, if any
 - notes: string or null — a brief summary of the conversation and key details
 
 Rules:
 - Return ONLY valid JSON, no markdown, no explanation, no code fences.
-- For dropdown fields (volunteer, reasonForContact, howFoundUs, province), the value MUST exactly match one of the listed options or be null — do not guess or rephrase.
-- If a field cannot be determined from the conversation, use null.
+- For dropdown fields (reasonForContact, howFoundUs, province), the value MUST exactly match one of the listed options or be null.
+- For referral centres, extract the actual centre name as mentioned in the conversation — do not leave blank if a centre is mentioned.
+- If a field cannot be determined, use null.
 
 Chat:
 ${chat}`;
@@ -121,18 +111,18 @@ ${chat}`;
       if (match) parsed = JSON.parse(match[0]);
     }
 
-    // Return camelCase keys; the frontend maps these to ClientInsert fields
     const result = {
       clientName:        (parsed.clientName as string | null) ?? null,
       firstContactDate:  (parsed.firstContactDate as string | null) ?? today,
       firstContactTime:  (parsed.firstContactTime as string | null) ?? null,
-      volunteer:         (parsed.volunteer as string | null) ?? null,
       age:               (parsed.age != null ? String(parsed.age) : null),
       sex:               (parsed.sex as string | null) ?? null,
       reasonForContact:  (parsed.reasonForContact as string | null) ?? null,
       howFoundUs:        (parsed.howFoundUs as string | null) ?? null,
       phoneNumber:       (parsed.phoneNumber as string | null) ?? null,
       province:          (parsed.province as string | null) ?? null,
+      referral1:         (parsed.referral1 as string | null) ?? null,
+      referral2:         (parsed.referral2 as string | null) ?? null,
       notes:             (parsed.notes as string | null) ?? null,
     };
 

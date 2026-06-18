@@ -1,190 +1,109 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { Client, ClientInsert } from '../lib/types';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import ClientsTable from '../components/Clients/ClientsTable';
-import ClientDetailModal from '../components/Clients/ClientDetailModal';
-import FilterSidebar, { Filters } from '../components/Clients/FilterSidebar';
-import { Search, UserPlus, SlidersHorizontal, X } from 'lucide-react';
-
-const PAGE_SIZE = 50;
+import { newClientsPerMonth } from '../lib/utils';
+import { Client } from '../lib/types';
+import { useDashboardCharts } from '../hooks/useDashboardCharts';
+import KPICards from '../components/Dashboard/KPICards';
+import {
+  NewClientsChart, ReasonChart, HowFoundChart,
+  ProvinceChart, ConclusionChart, DecisionChart,
+  ContactTimeChart,
+} from '../components/Dashboard/Charts';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface Props {
-  onRefresh: () => void;
-  onAddNew: () => void;
-  initialClientId?: string | null;
-  onInitialClientOpened?: () => void;
+  clients: Client[];
 }
 
-const defaultFilters: Filters = {
-  search: '',
-  dateFrom: '',
-  dateTo: '',
-  province: '',
-  reason: '',
-  sex: '',
-  conclusion: '',
-};
+export interface DashboardKPIs {
+  total: number | null;
+  women: number | null;
+  men: number | null;
+  avgAge: number | null;
+  referrals: number | null;
+  testimonyPotential: number | null;
+}
 
-export default function ClientsPage({ onRefresh, onAddNew, initialClientId, onInitialClientOpened }: Props) {
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-  const [filters, setFilters] = useState<Filters>(defaultFilters);
-  const [showFilters, setShowFilters] = useState(false);
-  const [rows, setRows] = useState<Client[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
-  const [page, setPage] = useState(0);
-  const [loading, setLoading] = useState(true);
+export default function DashboardPage(_: Props) {
+  const currentYear = new Date().getFullYear();
+  const [year, setYear] = useState(currentYear);
+  const [kpis, setKpis] = useState<DashboardKPIs>({
+    total: null, women: null, men: null,
+    avgAge: null, referrals: null, testimonyPotential: null,
+  });
+  const [monthlyData, setMonthlyData] = useState<{ month: string; count: number }[]>([]);
+  const [monthlyLoading, setMonthlyLoading] = useState(true);
 
-  const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-
-  useEffect(() => {
-    if (searchDebounce.current) clearTimeout(searchDebounce.current);
-    searchDebounce.current = setTimeout(() => setDebouncedSearch(filters.search), 300);
-    return () => { if (searchDebounce.current) clearTimeout(searchDebounce.current); };
-  }, [filters.search]);
+  const { charts, loading: chartsLoading } = useDashboardCharts();
 
   useEffect(() => {
-    setPage(0);
-  }, [debouncedSearch, filters.province, filters.reason, filters.sex, filters.conclusion, filters.dateFrom, filters.dateTo]);
-
-  const fetchRows = useCallback(async () => {
-    setLoading(true);
-    let query = supabase
-      .from('phsa_clients')
-      .select('*', { count: 'exact' })
-      .order('first_contact_date', { ascending: false, nullsFirst: false })
-      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
-
-    if (debouncedSearch) query = query.ilike('client_name', `%${debouncedSearch}%`);
-    if (filters.province)   query = query.eq('province', filters.province);
-    if (filters.reason)     query = query.eq('reason_for_contact', filters.reason);
-    if (filters.sex)        query = query.eq('sex', filters.sex);
-    if (filters.conclusion) query = query.eq('conclusion', filters.conclusion);
-    if (filters.dateFrom)   query = query.gte('first_contact_date', filters.dateFrom);
-    if (filters.dateTo)     query = query.lte('first_contact_date', filters.dateTo);
-
-    const { data, count, error } = await query;
-    if (error) console.error('Failed to fetch clients:', error.message);
-    setRows((data ?? []) as Client[]);
-    setTotalCount(count ?? 0);
-    setLoading(false);
-  }, [page, debouncedSearch, filters.province, filters.reason, filters.sex, filters.conclusion, filters.dateFrom, filters.dateTo]);
-
-  useEffect(() => { fetchRows(); }, [fetchRows]);
+    Promise.all([
+      supabase.from('phsa_clients').select('*', { count: 'exact', head: true }),
+      supabase.from('phsa_clients').select('*', { count: 'exact', head: true }).eq('sex', 'F'),
+      supabase.from('phsa_clients').select('*', { count: 'exact', head: true }).eq('sex', 'M'),
+      supabase.from('phsa_clients').select('*', { count: 'exact', head: true }).or('referral_1.neq.null,referral_2.neq.null'),
+      supabase.from('phsa_clients').select('*', { count: 'exact', head: true }).in('testimony_potential', ['Yes', 'Asked', 'Received', 'Provided']),
+      supabase.rpc('get_avg_age', { date_from: null, date_to: null }),
+    ]).then(([total, female, male, referrals, testimony, avgAge]) => {
+      setKpis({
+        total:              total.count     ?? null,
+        women:              female.count    ?? null,
+        men:                male.count      ?? null,
+        referrals:          referrals.count ?? null,
+        testimonyPotential: testimony.count ?? null,
+        avgAge:             avgAge.data != null ? Number(avgAge.data) : null,
+      });
+    });
+  }, []);
 
   useEffect(() => {
-    if (!initialClientId) return;
+    setMonthlyLoading(true);
     supabase
       .from('phsa_clients')
-      .select('*')
-      .eq('id', initialClientId)
-      .maybeSingle()
+      .select('first_contact_date')
+      .gte('first_contact_date', `${year}-01-01`)
+      .lte('first_contact_date', `${year}-12-31`)
       .then(({ data }) => {
-        if (data) setSelectedClient(data as Client);
-        onInitialClientOpened?.();
+        const rows = (data ?? []) as Pick<Client, 'first_contact_date'>[];
+        setMonthlyData(newClientsPerMonth(rows as Client[], year));
+        setMonthlyLoading(false);
       });
-  }, [initialClientId]);
-
-  const handleUpdate = async (id: string, data: ClientInsert) => {
-    const { error } = await supabase
-      .from('phsa_clients')
-      .update({ ...data, updated_at: new Date().toISOString() })
-      .eq('id', id);
-    if (error) throw new Error(error.message);
-    const updated = rows.find(r => r.id === id);
-    if (updated) setSelectedClient({ ...updated, ...data } as Client);
-    await fetchRows();
-    onRefresh();
-    setSelectedClient(null);
-  };
-
-  const handleDelete = async (id: string) => {
-    const { error } = await supabase.from('phsa_clients').delete().eq('id', id);
-    if (error) throw new Error(error.message);
-    await fetchRows();
-    onRefresh();
-  };
-
-  const handleNoteUpdate = async (id: string, note: string | null, colour: string) => {
-    const { error } = await supabase
-      .from('phsa_clients')
-      .update({ maris_note: note, maris_note_colour: colour, updated_at: new Date().toISOString() })
-      .eq('id', id);
-    if (error) throw new Error(error.message);
-    setRows(prev =>
-      prev.map(r => r.id === id ? { ...r, maris_note: note, maris_note_colour: colour } : r)
-    );
-  };
-
-  const pageCount = Math.ceil(totalCount / PAGE_SIZE);
-  const activeFilterCount = Object.entries(filters).filter(([k, v]) => k !== 'search' && v).length;
+  }, [year]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-        <div className="flex items-center gap-2 flex-1 max-w-sm">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              className="input pl-9"
-              placeholder="Search by client name..."
-              value={filters.search}
-              onChange={e => setFilters(f => ({ ...f, search: e.target.value }))}
-            />
-            {filters.search && (
-              <button
-                onClick={() => setFilters(f => ({ ...f, search: '' }))}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`btn-secondary relative ${activeFilterCount > 0 ? 'border-primary-300 text-primary-700' : ''}`}
-          >
-            <SlidersHorizontal className="w-4 h-4" />
-            {activeFilterCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-primary-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                {activeFilterCount}
-              </span>
-            )}
+    <div className="space-y-6">
+      <KPICards kpis={kpis} />
+
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Analytics</h2>
+        <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-1 py-1 shadow-sm">
+          <button onClick={() => setYear(y => y - 1)} className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors">
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <span className="text-sm font-semibold text-slate-700 min-w-[3rem] text-center">{year}</span>
+          <button onClick={() => setYear(y => y + 1)} disabled={year >= currentYear} className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors disabled:opacity-30">
+            <ChevronRight className="w-4 h-4" />
           </button>
         </div>
-        <button onClick={onAddNew} className="btn-primary">
-          <UserPlus className="w-4 h-4" /> Import Client
-        </button>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-4 items-start">
-        {showFilters && (
-          <FilterSidebar
-            filters={filters}
-            onChange={f => setFilters(f)}
-            onClear={() => setFilters(defaultFilters)}
-          />
+      <div className="flex flex-col gap-4">
+        <NewClientsChart data={monthlyData} year={year} loading={monthlyLoading} />
+        {chartsLoading ? (
+          <div className="flex items-center justify-center py-16">
+            <div className="w-6 h-6 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : (
+          <>
+            <ReasonChart     data={charts.byReason} />
+            <HowFoundChart   data={charts.byHowFound} />
+            <ProvinceChart   data={charts.byProvince} />
+            <ConclusionChart data={charts.byConclusion} />
+            <DecisionChart   data={charts.byDecision} />
+            <ContactTimeChart data={charts.timeBands} />
+          </>
         )}
-        <div className="flex-1 min-w-0">
-          <ClientsTable
-            clients={rows}
-            loading={loading}
-            totalCount={totalCount}
-            page={page}
-            pageCount={pageCount}
-            onPageChange={setPage}
-            onRowClick={setSelectedClient}
-            onNoteUpdate={handleNoteUpdate}
-          />
-        </div>
       </div>
-
-      <ClientDetailModal
-        client={selectedClient}
-        onClose={() => setSelectedClient(null)}
-        onUpdate={handleUpdate}
-        onDelete={handleDelete}
-      />
     </div>
   );
 }

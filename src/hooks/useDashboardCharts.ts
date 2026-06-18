@@ -5,7 +5,6 @@ import { ChartRow } from './useReportData';
 export interface DashboardCharts {
   byReason:    ChartRow[];
   byHowFound:  ChartRow[];
-  byVolunteer: ChartRow[];
   byProvince:  ChartRow[];
   byDecision:  ChartRow[];
   byConclusion:ChartRow[];
@@ -13,7 +12,7 @@ export interface DashboardCharts {
 }
 
 const EMPTY: DashboardCharts = {
-  byReason: [], byHowFound: [], byVolunteer: [],
+  byReason: [], byHowFound: [],
   byProvince: [], byDecision: [], byConclusion: [], timeBands: [],
 };
 
@@ -33,16 +32,14 @@ export function useDashboardCharts() {
     Promise.all([
       supabase.rpc('get_reason_counts',     NO_DATE),
       supabase.rpc('get_how_found_counts',  NO_DATE),
-      supabase.rpc('get_volunteer_counts',  NO_DATE),
       supabase.rpc('get_province_counts',   NO_DATE),
       supabase.rpc('get_decision_counts',   NO_DATE),
       supabase.rpc('get_conclusion_counts', NO_DATE),
       supabase.rpc('get_time_band_counts',  NO_DATE),
-    ]).then(([reason, howFound, volunteer, province, decision, conclusion, timeBands]) => {
+    ]).then(([reason, howFound, province, decision, conclusion, timeBands]) => {
       setCharts({
         byReason:    normalize(reason.data),
         byHowFound:  normalize(howFound.data),
-        byVolunteer: normalize(volunteer.data),
         byProvince:  normalize(province.data),
         byDecision:  normalize(decision.data),
         byConclusion:normalize(conclusion.data),

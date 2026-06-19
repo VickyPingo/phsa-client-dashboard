@@ -75,26 +75,34 @@ Deno.serve(async (req: Request) => {
 
     const today = new Date().toISOString().split("T")[0];
 
-    const prompt = `You are a data extraction assistant for Pregnancy Help South Africa (PHSA). Extract client information from this conversation and return ONLY a JSON object with exactly these keys:
+    const prompt = `You are a data extraction assistant for Pregnancy Help South Africa (PHSA). Extract client information from this conversation and return ONLY a JSON object.
 
-- clientName: string or null — the client's full name
-- firstContactDate: ISO date string YYYY-MM-DD or null — date of first contact
-- firstContactTime: string HH:MM (24-hour) or null — time of first message
-- age: string or null — client's age as a number string (e.g. "24") or "Unknown"
+IMPORTANT — the chat may be in different formats:
+- Facebook Messenger: "[Name]: message" or "Name\nmessage"  
+- WhatsApp export: "DD Mon YYYY, HH:MM - Name: message" or lines with date/time then name then message
+- Raw paste: name appears on its own line, followed by their messages
+- The PHSA volunteer/staff often says "Hello [name]" or "Hi [name]" — use this to confirm the client name
+- Look for the person who is NOT the PHSA volunteer/staff as the client
+
+Return exactly these keys:
+- clientName: string or null — the client's full name (the person seeking help, NOT the PHSA volunteer). Look for: standalone name lines, "[Name]:" prefix, "Hello [Name]" greetings from staff, or sender names in timestamps like "DD Mon YYYY, HH:MM - ClientName: message"
+- firstContactDate: ISO date string YYYY-MM-DD or null — the date of the FIRST message in the conversation. Look carefully for date stamps like "27 May 2026", "2026-05-27", "27/05/2026" anywhere in the text
+- firstContactTime: string HH:MM (24-hour) or null — the time of the FIRST message. Look for times appearing next to date stamps, e.g. "27 May 2026, 17:32" → "17:32", "2026-05-27 09:15" → "09:15", "[09:34]" → "09:34", "19:17 -" → "19:17". Always return in HH:MM 24-hour format
+- age: string or null — client's age as a number string or "Unknown"
 - sex: "F", "M", "Unknown", or null
-- reasonForContact: string or null — must exactly match one of: ${JSON.stringify(REASONS_FOR_CONTACT)}. Null if no exact match.
-- howFoundUs: string or null — must exactly match one of: ${JSON.stringify(HOW_FOUND_OPTIONS)}. Null if no exact match.
-- phoneNumber: string or null — client's phone number
-- province: string or null — must exactly match one of: ${JSON.stringify(PROVINCES)}. Null if cannot be determined.
-- referral1: string or null — name of the first pregnancy help centre or referral mentioned. Known centres include: ${JSON.stringify(centreNames.slice(0, 40))}. Match as closely as possible to a known centre name, otherwise use the exact name mentioned.
-- referral2: string or null — name of a second centre if mentioned, otherwise null.
-- notes: string or null — a brief summary of the conversation and key details.
+- reasonForContact: string or null — must exactly match one of: ${JSON.stringify(REASONS_FOR_CONTACT)}
+- howFoundUs: string or null — must exactly match one of: ${JSON.stringify(HOW_FOUND_OPTIONS)}
+- phoneNumber: string or null
+- province: string or null — must exactly match one of: ${JSON.stringify(PROVINCES)}
+- referral1: string or null — first referral centre name mentioned. Known centres: ${JSON.stringify(centreNames.slice(0, 40))}
+- referral2: string or null — second referral centre if mentioned
+- notes: string or null — brief summary of the conversation
 
 Rules:
-- Return ONLY valid JSON, no markdown, no explanation, no code fences.
-- For referral centres, prioritise matching to a known centre name from the list above.
-- If province is not explicitly mentioned, leave it null (it will be inferred from the referral centre automatically).
-- If a field cannot be determined, use null.
+- Return ONLY valid JSON, no markdown, no explanation, no code fences
+- For dropdown fields, value MUST exactly match the listed options or be null
+- If a field cannot be determined, use null
+- Pay special attention to extracting the clientName and firstContactDate — these are the most important fields
 
 Chat:
 ${chat}`;
